@@ -1,49 +1,54 @@
 package org.example.hssv1.model;
 
 import java.sql.Timestamp;
+import jakarta.persistence.*;
 
+@Entity
+@Table(name = "advisor_profiles")
 public class AdvisorProfile {
-    private int id;
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
     private CustomUser user;
-    private Department department;
-    private Major major;
-    private String title;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "department_id") // Can be null if admin is system-wide
+    private Department department; // Department the advisor belongs to, if any
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private AdvisorRole role = AdvisorRole.ADVISOR; // Default role
+
+    @Column(columnDefinition = "TEXT")
     private String bio;
+
+    private String title;
     private String expertise;
-    private String role;
     private String phone;
     private boolean available;
     private Timestamp createdAt;
     private Timestamp updatedAt;
 
     public AdvisorProfile() {
-        this.role = "advisor"; // Mặc định là cố vấn thông thường
+        this.role = AdvisorRole.ADVISOR; // Mặc định là cố vấn thông thường
         this.available = true; // Mặc định là có sẵn
     }
 
-    public AdvisorProfile(int id, CustomUser user, Department department, Major major, 
-                         String title, String bio, String expertise, String role,
-                         String phone, boolean available, Timestamp createdAt, Timestamp updatedAt) {
-        this.id = id;
+    public AdvisorProfile(CustomUser user, AdvisorRole role) {
         this.user = user;
-        this.department = department;
-        this.major = major;
-        this.title = title;
-        this.bio = bio;
-        this.expertise = expertise;
         this.role = role;
-        this.phone = phone;
-        this.available = available;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
     }
 
     // Getters and Setters
-    public int getId() {
+    public Long getId() {
         return id;
     }
 
-    public void setId(int id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
@@ -63,20 +68,12 @@ public class AdvisorProfile {
         this.department = department;
     }
 
-    public Major getMajor() {
-        return major;
+    public AdvisorRole getRole() {
+        return role;
     }
 
-    public void setMajor(Major major) {
-        this.major = major;
-    }
-
-    public String getTitle() {
-        return title;
-    }
-
-    public void setTitle(String title) {
-        this.title = title;
+    public void setRole(AdvisorRole role) {
+        this.role = role;
     }
 
     public String getBio() {
@@ -87,20 +84,20 @@ public class AdvisorProfile {
         this.bio = bio;
     }
 
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
     public String getExpertise() {
         return expertise;
     }
 
     public void setExpertise(String expertise) {
         this.expertise = expertise;
-    }
-
-    public String getRole() {
-        return role;
-    }
-
-    public void setRole(String role) {
-        this.role = role;
     }
 
     public String getPhone() {
@@ -136,11 +133,16 @@ public class AdvisorProfile {
     }
 
     public boolean isAdmin() {
-        return "admin".equals(role);
+        return AdvisorRole.ADMIN.equals(role);
     }
 
     @Override
     public String toString() {
         return user != null ? user.getFullName() : "Unknown Advisor";
+    }
+
+    public enum AdvisorRole {
+        ADVISOR, // Ban tư vấn
+        ADMIN    // Admin hệ thống
     }
 }

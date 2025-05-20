@@ -1,10 +1,11 @@
 package org.example.hssv1.dao;
 
 import org.example.hssv1.model.QuestionCategory;
-import org.example.hssv1.util.DatabaseConnection;
+import org.example.hssv1.util.HibernateUtil;
+import org.hibernate.Session;
+import org.hibernate.Transaction;
+import org.hibernate.query.Query;
 
-import java.sql.*;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -12,134 +13,99 @@ import java.util.List;
  */
 public class QuestionCategoryDAO {
     
+    public QuestionCategory findById(Long id) {
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            return session.get(QuestionCategory.class, id);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public QuestionCategory findByName(String name) {
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            Query<QuestionCategory> query = session.createQuery("FROM QuestionCategory WHERE name = :name", QuestionCategory.class);
+            query.setParameter("name", name);
+            return query.uniqueResult();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
     /**
      * Lấy tất cả các loại câu hỏi
      */
     public List<QuestionCategory> getAllCategories() {
-        String sql = "SELECT * FROM question_categories WHERE is_active = true ORDER BY name";
-        List<QuestionCategory> categories = new ArrayList<>();
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-            
-            while (rs.next()) {
-                categories.add(mapResultSetToCategory(rs));
-            }
-            
-            return categories;
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return categories;
-        }
-    }
-    
-    /**
-     * Lấy loại câu hỏi theo ID
-     */
-    public QuestionCategory getCategoryById(int id) {
-        String sql = "SELECT * FROM question_categories WHERE id = ?";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
-            pstmt.setInt(1, id);
-            ResultSet rs = pstmt.executeQuery();
-            
-            if (rs.next()) {
-                return mapResultSetToCategory(rs);
-            }
-            
-            return null;
-        } catch (SQLException e) {
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            return session.createQuery("FROM QuestionCategory ORDER BY name ASC", QuestionCategory.class).list();
+        } catch (Exception e) {
             e.printStackTrace();
             return null;
         }
     }
-    
-    /**
-     * Tạo loại câu hỏi mới
-     */
-    public int createCategory(QuestionCategory category) {
-        String sql = "INSERT INTO question_categories (name, description, is_active) VALUES (?, ?, ?)";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            
-            pstmt.setString(1, category.getName());
-            pstmt.setString(2, category.getDescription());
-            pstmt.setBoolean(3, category.isActive());
-            
-            int affectedRows = pstmt.executeUpdate();
-            
-            if (affectedRows > 0) {
-                ResultSet rs = pstmt.getGeneratedKeys();
-                if (rs.next()) {
-                    return rs.getInt(1);
-                }
+
+    public boolean saveCategory(QuestionCategory category) {
+        Transaction transaction = null;
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            transaction = session.beginTransaction();
+            session.persist(category);
+            transaction.commit();
+            return true;
+        } catch (Exception e) {
+            if (transaction != null) {
+                transaction.rollback();
             }
-            
-            return -1;
-        } catch (SQLException e) {
             e.printStackTrace();
-            return -1;
+            return false;
         }
     }
-    
+
     /**
      * Cập nhật loại câu hỏi
      */
     public boolean updateCategory(QuestionCategory category) {
-        String sql = "UPDATE question_categories SET name = ?, description = ?, is_active = ? WHERE id = ?";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
-            pstmt.setString(1, category.getName());
-            pstmt.setString(2, category.getDescription());
-            pstmt.setBoolean(3, category.isActive());
-            pstmt.setInt(4, category.getId());
-            
-            int affectedRows = pstmt.executeUpdate();
-            
-            return affectedRows > 0;
-        } catch (SQLException e) {
+        Transaction transaction = null;
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            transaction = session.beginTransaction();
+            session.merge(category);
+            transaction.commit();
+            return true;
+        } catch (Exception e) {
+            if (transaction != null) {
+                transaction.rollback();
+            }
             e.printStackTrace();
             return false;
         }
     }
-    
+
     /**
      * Xóa loại câu hỏi
      */
-    public boolean deleteCategory(int id) {
-        String sql = "DELETE FROM question_categories WHERE id = ?";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
-            pstmt.setInt(1, id);
-            
-            int affectedRows = pstmt.executeUpdate();
-            
-            return affectedRows > 0;
-        } catch (SQLException e) {
+    public boolean deleteCategory(Long id) {
+        Transaction transaction = null;
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            transaction = session.beginTransaction();
+            QuestionCategory category = session.get(QuestionCategory.class, id);
+            if (category != null) {
+                 if (category.getQuestions() == null || category.getQuestions().isEmpty()) {
+                    session.remove(category);
+                    transaction.commit();
+                    return true;
+                } else {
+                    if (transaction != null) transaction.rollback();
+                    System.err.println("Cannot delete category: It has associated questions.");
+                    return false;
+                }
+            }
+            return false; // Category not found
+        } catch (Exception e) {
+            if (transaction != null) {
+                transaction.rollback();
+            }
             e.printStackTrace();
             return false;
         }
-    }
-    
-    /**
-     * Chuyển đổi từ ResultSet sang đối tượng QuestionCategory
-     */
-    private QuestionCategory mapResultSetToCategory(ResultSet rs) throws SQLException {
-        QuestionCategory category = new QuestionCategory();
-        
-        category.setId(rs.getInt("id"));
-        category.setName(rs.getString("name"));
-        category.setDescription(rs.getString("description"));
-        category.setActive(rs.getBoolean("is_active"));
-        
-        return category;
     }
 }

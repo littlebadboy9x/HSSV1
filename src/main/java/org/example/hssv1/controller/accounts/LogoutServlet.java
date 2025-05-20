@@ -1,11 +1,11 @@
 package org.example.hssv1.controller.accounts;
 
-import javax.servlet.ServletException;
-import javax.servlet.annotation.WebServlet;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 
 /**
@@ -20,10 +20,17 @@ public class LogoutServlet extends HttpServlet {
         HttpSession session = request.getSession(false);
         
         if (session != null) {
+            // Remove specific attributes if needed for clean logout before invalidating
+            // session.removeAttribute("user");
+            // session.removeAttribute("isAdmin");
+            // session.removeAttribute("isAdvisor");
+            // session.removeAttribute("advisorProfile");
             session.invalidate();
         }
         
-        response.sendRedirect(request.getContextPath() + "/?message=logout_success");
+        // Redirect to home page with a logout message
+        // Consider using a flash attribute if a framework supports it, or a query parameter for simplicity
+        response.sendRedirect(request.getContextPath() + "/login?message=logoutSuccess");
     }
     
     @Override

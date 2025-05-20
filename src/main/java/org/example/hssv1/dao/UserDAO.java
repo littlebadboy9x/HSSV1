@@ -1,11 +1,14 @@
 package org.example.hssv1.dao;
 
 import org.example.hssv1.model.CustomUser;
-import org.example.hssv1.util.DatabaseConnection;
+import org.example.hssv1.util.HibernateUtil;
+import org.hibernate.Session;
+import org.hibernate.Transaction;
+import org.hibernate.query.Query;
+import org.mindrot.jbcrypt.BCrypt;
 
-import java.sql.*;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * DAO xử lý truy vấn dữ liệu người dùng
@@ -13,92 +16,42 @@ import java.util.List;
 public class UserDAO {
     
     /**
+     * Lấy người dùng theo email
+     */
+    public CustomUser findByEmail(String email) {
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            Query<CustomUser> query = session.createQuery("FROM CustomUser WHERE email = :email", CustomUser.class);
+            query.setParameter("email", email);
+            return query.uniqueResult();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+    
+    /**
+     * Lấy người dùng theo username
+     */
+    public CustomUser findByUsername(String username) {
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            Query<CustomUser> query = session.createQuery("FROM CustomUser WHERE username = :username", CustomUser.class);
+            query.setParameter("username", username);
+            return query.uniqueResult();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+    
+    /**
      * Lấy người dùng theo ID
      */
-    public CustomUser getUserById(int id) {
-        String sql = "SELECT * FROM users WHERE id = ?";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setInt(1, id);
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return extractUserFromResultSet(rs);
-                }
-            }
-        } catch (SQLException e) {
+    public CustomUser findById(Long id) {
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            return session.get(CustomUser.class, id);
+        } catch (Exception e) {
             e.printStackTrace();
-        }
-        
-        return null;
-    }
-    
-    /**
-     * Lấy người dùng theo tên đăng nhập
-     */
-    public CustomUser getUserByUsername(String username) {
-        String sql = "SELECT * FROM users WHERE username = ?";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setString(1, username);
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return extractUserFromResultSet(rs);
-                }
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        
-        return null;
-    }
-    
-    /**
-     * Xác thực người dùng
-     */
-    public CustomUser authenticate(String username, String password) {
-        String sql = "SELECT * FROM users WHERE username = ? AND password = ?";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setString(1, username);
-            stmt.setString(2, password); // Trong thực tế nên sử dụng mã hóa password
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    CustomUser user = extractUserFromResultSet(rs);
-                    updateLastLogin(user.getId());
-                    return user;
-                }
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        
-        return null;
-    }
-    
-    /**
-     * Cập nhật thời gian đăng nhập cuối
-     */
-    private void updateLastLogin(int userId) {
-        String sql = "UPDATE users SET last_login = ? WHERE id = ?";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
-            stmt.setInt(2, userId);
-            stmt.executeUpdate();
-            
-        } catch (SQLException e) {
-            e.printStackTrace();
+            return null;
         }
     }
     
@@ -106,90 +59,70 @@ public class UserDAO {
      * Lấy tất cả người dùng
      */
     public List<CustomUser> getAllUsers() {
-        List<CustomUser> users = new ArrayList<>();
-        String sql = "SELECT * FROM users ORDER BY id";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-            
-            while (rs.next()) {
-                users.add(extractUserFromResultSet(rs));
-            }
-        } catch (SQLException e) {
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            return session.createQuery("FROM CustomUser", CustomUser.class).list();
+        } catch (Exception e) {
             e.printStackTrace();
+            return new ArrayList<>();
         }
-        
-        return users;
+    }
+    
+    /**
+     * Xác thực người dùng
+     */
+    public CustomUser authenticate(String email, String password) {
+        CustomUser user = findByEmail(email);
+        if (user != null && BCrypt.checkpw(password, user.getPassword())) {
+            return user;
+        }
+        return null;
+    }
+    
+    /**
+     * Xác thực người dùng bằng username
+     */
+    public CustomUser authenticateByUsername(String username, String password) {
+        CustomUser user = findByUsername(username);
+        if (user != null && BCrypt.checkpw(password, user.getPassword())) {
+            return user;
+        }
+        return null;
     }
     
     /**
      * Tạo người dùng mới
      */
-    public int createUser(CustomUser user) {
-        String sql = "INSERT INTO users (username, password, email, first_name, last_name, is_active, " +
-                     "is_staff, is_superuser, date_joined, last_login, user_type) " +
-                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            
-            stmt.setString(1, user.getUsername());
-            stmt.setString(2, user.getPassword()); // Trong thực tế nên mã hóa password
-            stmt.setString(3, user.getEmail());
-            stmt.setString(4, user.getFirstName());
-            stmt.setString(5, user.getLastName());
-            stmt.setBoolean(6, user.isActive());
-            stmt.setBoolean(7, user.isStaff());
-            stmt.setBoolean(8, user.isSuperuser());
-            
-            if (user.getDateJoined() == null) {
-                stmt.setTimestamp(9, new Timestamp(System.currentTimeMillis()));
-            } else {
-                stmt.setTimestamp(9, user.getDateJoined());
+    public boolean saveUser(CustomUser user) {
+        Transaction transaction = null;
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            transaction = session.beginTransaction();
+            user.setPassword(BCrypt.hashpw(user.getPassword(), BCrypt.gensalt()));
+            session.persist(user);
+            transaction.commit();
+            return true;
+        } catch (Exception e) {
+            if (transaction != null) {
+                transaction.rollback();
             }
-            
-            stmt.setTimestamp(10, user.getLastLogin());
-            stmt.setString(11, user.getUserType());
-            
-            int affectedRows = stmt.executeUpdate();
-            
-            if (affectedRows > 0) {
-                try (ResultSet rs = stmt.getGeneratedKeys()) {
-                    if (rs.next()) {
-                        return rs.getInt(1);
-                    }
-                }
-            }
-        } catch (SQLException e) {
             e.printStackTrace();
+            return false;
         }
-        
-        return -1;
     }
     
     /**
      * Cập nhật thông tin người dùng
      */
     public boolean updateUser(CustomUser user) {
-        String sql = "UPDATE users SET username = ?, email = ?, first_name = ?, last_name = ?, " +
-                     "is_active = ?, is_staff = ?, is_superuser = ?, user_type = ? WHERE id = ?";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setString(1, user.getUsername());
-            stmt.setString(2, user.getEmail());
-            stmt.setString(3, user.getFirstName());
-            stmt.setString(4, user.getLastName());
-            stmt.setBoolean(5, user.isActive());
-            stmt.setBoolean(6, user.isStaff());
-            stmt.setBoolean(7, user.isSuperuser());
-            stmt.setString(8, user.getUserType());
-            stmt.setInt(9, user.getId());
-            
-            return stmt.executeUpdate() > 0;
-        } catch (SQLException e) {
+        Transaction transaction = null;
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            transaction = session.beginTransaction();
+            session.merge(user);
+            transaction.commit();
+            return true;
+        } catch (Exception e) {
+            if (transaction != null) {
+                transaction.rollback();
+            }
             e.printStackTrace();
             return false;
         }
@@ -198,17 +131,22 @@ public class UserDAO {
     /**
      * Cập nhật mật khẩu người dùng
      */
-    public boolean updatePassword(int userId, String newPassword) {
-        String sql = "UPDATE users SET password = ? WHERE id = ?";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setString(1, newPassword); // Trong thực tế nên mã hóa password
-            stmt.setInt(2, userId);
-            
-            return stmt.executeUpdate() > 0;
-        } catch (SQLException e) {
+    public boolean updatePassword(Long userId, String newPassword) {
+        Transaction transaction = null;
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            transaction = session.beginTransaction();
+            CustomUser user = session.get(CustomUser.class, userId);
+            if (user != null) {
+                user.setPassword(BCrypt.hashpw(newPassword, BCrypt.gensalt()));
+                session.merge(user);
+                transaction.commit();
+                return true;
+            }
+            return false;
+        } catch (Exception e) {
+            if (transaction != null) {
+                transaction.rollback();
+            }
             e.printStackTrace();
             return false;
         }
@@ -217,38 +155,36 @@ public class UserDAO {
     /**
      * Xóa người dùng
      */
-    public boolean deleteUser(int id) {
-        String sql = "DELETE FROM users WHERE id = ?";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setInt(1, id);
-            
-            return stmt.executeUpdate() > 0;
-        } catch (SQLException e) {
+    public boolean deleteUser(Long id) {
+        Transaction transaction = null;
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            transaction = session.beginTransaction();
+            CustomUser user = session.get(CustomUser.class, id);
+            if (user != null) {
+                if (user.getAdvisorProfile() != null) {
+                    // Option 1: Delete AdvisorProfile as well (if it's owned by CustomUser and cascade is set)
+                    // Option 2: Disassociate and leave AdvisorProfile (or delete it separately based on requirements)
+                    // For now, let's assume cascade will handle it or it's disassociated if needed.
+                    // advisorProfileDAO.deleteProfile(user.getAdvisorProfile().getId()); // If manual deletion needed
+                }
+                session.remove(user);
+                transaction.commit();
+                return true;
+            }
+            return false;
+        } catch (Exception e) {
+            if (transaction != null) {
+                transaction.rollback();
+            }
             e.printStackTrace();
             return false;
         }
     }
     
     /**
-     * Trích xuất đối tượng User từ ResultSet
+     * Kiểm tra mật khẩu
      */
-    private CustomUser extractUserFromResultSet(ResultSet rs) throws SQLException {
-        CustomUser user = new CustomUser();
-        user.setId(rs.getInt("id"));
-        user.setUsername(rs.getString("username"));
-        user.setPassword(rs.getString("password"));
-        user.setEmail(rs.getString("email"));
-        user.setFirstName(rs.getString("first_name"));
-        user.setLastName(rs.getString("last_name"));
-        user.setActive(rs.getBoolean("is_active"));
-        user.setStaff(rs.getBoolean("is_staff"));
-        user.setSuperuser(rs.getBoolean("is_superuser"));
-        user.setDateJoined(rs.getTimestamp("date_joined"));
-        user.setLastLogin(rs.getTimestamp("last_login"));
-        user.setUserType(rs.getString("user_type"));
-        return user;
+    public boolean checkPassword(String plainPassword, String hashedPassword) {
+        return BCrypt.checkpw(plainPassword, hashedPassword);
     }
 }

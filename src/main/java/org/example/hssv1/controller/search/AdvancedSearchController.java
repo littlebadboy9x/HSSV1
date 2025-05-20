@@ -3,14 +3,15 @@ package org.example.hssv1.controller.search;
 import org.example.hssv1.dao.*;
 import org.example.hssv1.model.*;
 
-import javax.servlet.ServletException;
-import javax.servlet.annotation.WebServlet;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Controller xử lý tìm kiếm nâng cao
@@ -24,7 +25,7 @@ public class AdvancedSearchController extends HttpServlet {
     private DepartmentDAO departmentDAO;
     
     @Override
-    public void init() throws ServletException {
+    public void init() {
         questionDAO = new QuestionDAO();
         categoryDAO = new QuestionCategoryDAO();
         majorDAO = new MajorDAO();
@@ -35,101 +36,89 @@ public class AdvancedSearchController extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
         
-        // Lấy tham số tìm kiếm
         String keyword = request.getParameter("keyword");
-        String categoryId = request.getParameter("category");
-        String majorId = request.getParameter("major");
-        String departmentId = request.getParameter("department");
-        String status = request.getParameter("status");
+        String categoryIdStr = request.getParameter("category");
+        String majorIdStr = request.getParameter("major");
+        String departmentIdStr = request.getParameter("department");
+        String statusStr = request.getParameter("status");
         String sortBy = request.getParameter("sortBy");
         
-        // Lấy danh sách loại câu hỏi, ngành học và khoa cho bộ lọc
         List<QuestionCategory> categories = categoryDAO.getAllCategories();
         List<Major> majors = majorDAO.getAllMajors();
         List<Department> departments = departmentDAO.getAllDepartments();
         
-        // Đặt các thuộc tính vào request
         request.setAttribute("categories", categories);
         request.setAttribute("majors", majors);
         request.setAttribute("departments", departments);
-        request.setAttribute("selectedCategory", categoryId);
-        request.setAttribute("selectedMajor", majorId);
-        request.setAttribute("selectedDepartment", departmentId);
-        request.setAttribute("selectedStatus", status);
+        request.setAttribute("selectedCategory", categoryIdStr);
+        request.setAttribute("selectedMajor", majorIdStr);
+        request.setAttribute("selectedDepartment", departmentIdStr);
+        request.setAttribute("selectedStatus", statusStr);
         request.setAttribute("keyword", keyword);
         request.setAttribute("sortBy", sortBy);
         
-        // Nếu có tham số tìm kiếm, thực hiện tìm kiếm
-        if (keyword != null || categoryId != null || majorId != null || 
-            departmentId != null || status != null) {
-            
-            List<Question> searchResults = performSearch(keyword, categoryId, majorId, departmentId, status, sortBy);
-            request.setAttribute("searchResults", searchResults);
-            request.setAttribute("resultCount", searchResults.size());
-        }
+        List<Question> searchResults = performSearch(keyword, categoryIdStr, majorIdStr, departmentIdStr, statusStr, sortBy);
+        request.setAttribute("searchResults", searchResults);
+        request.setAttribute("resultCount", searchResults != null ? searchResults.size() : 0);
         
-        // Forward đến trang tìm kiếm
         request.getRequestDispatcher("/WEB-INF/views/search/advanced-search.jsp").forward(request, response);
     }
     
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
-        
         doGet(request, response);
     }
     
-    /**
-     * Thực hiện tìm kiếm dựa trên các tham số
-     */
-    private List<Question> performSearch(String keyword, String categoryId, String majorId, 
-                                        String departmentId, String status, String sortBy) {
+    private List<Question> performSearch(String keyword, String categoryIdStr, String majorIdStr, 
+                                        String departmentIdStr, String statusStr, String sortBy) {
         
-        List<Question> results = new ArrayList<>();
+        List<Question> results;
         
-        // Tìm kiếm theo từ khóa
         if (keyword != null && !keyword.trim().isEmpty()) {
-            results = questionDAO.searchQuestions(keyword.trim());
+            results = questionDAO.findByKeyword(keyword.trim());
         } else {
             results = questionDAO.getAllQuestions();
         }
         
-        // Lọc theo loại câu hỏi
-        if (categoryId != null && !categoryId.isEmpty()) {
+        if (results == null) results = new ArrayList<>();
+
+        if (categoryIdStr != null && !categoryIdStr.isEmpty()) {
             try {
-                int catId = Integer.parseInt(categoryId);
+                Long catId = Long.parseLong(categoryIdStr);
                 results = filterByCategory(results, catId);
             } catch (NumberFormatException e) {
-                // Không làm gì, bỏ qua bộ lọc này
+                // Ignore if categoryId is not a valid Long
             }
         }
         
-        // Lọc theo ngành học
-        if (majorId != null && !majorId.isEmpty()) {
+        if (majorIdStr != null && !majorIdStr.isEmpty()) {
             try {
-                int majId = Integer.parseInt(majorId);
+                Long majId = Long.parseLong(majorIdStr);
                 results = filterByMajor(results, majId);
             } catch (NumberFormatException e) {
-                // Không làm gì, bỏ qua bộ lọc này
+                // Ignore if majorId is not a valid Long
             }
         }
         
-        // Lọc theo khoa
-        if (departmentId != null && !departmentId.isEmpty()) {
+        if (departmentIdStr != null && !departmentIdStr.isEmpty()) {
             try {
-                int depId = Integer.parseInt(departmentId);
+                Long depId = Long.parseLong(departmentIdStr);
                 results = filterByDepartment(results, depId);
             } catch (NumberFormatException e) {
-                // Không làm gì, bỏ qua bộ lọc này
+                // Ignore if departmentId is not a valid Long
             }
         }
         
-        // Lọc theo trạng thái
-        if (status != null && !status.isEmpty()) {
-            results = filterByStatus(results, status);
+        if (statusStr != null && !statusStr.isEmpty()) {
+            try {
+                Question.QuestionStatus status = Question.QuestionStatus.valueOf(statusStr.toUpperCase());
+                results = filterByStatus(results, status);
+            } catch (IllegalArgumentException e) {
+                // Ignore if status is not a valid enum constant
+            }
         }
         
-        // Sắp xếp kết quả
         if (sortBy != null && !sortBy.isEmpty()) {
             sortResults(results, sortBy);
         }
@@ -137,71 +126,33 @@ public class AdvancedSearchController extends HttpServlet {
         return results;
     }
     
-    /**
-     * Lọc câu hỏi theo loại
-     */
-    private List<Question> filterByCategory(List<Question> questions, int categoryId) {
-        List<Question> filtered = new ArrayList<>();
-        
-        for (Question question : questions) {
-            if (question.getCategory() != null && question.getCategory().getId() == categoryId) {
-                filtered.add(question);
-            }
-        }
-        
-        return filtered;
+    private List<Question> filterByCategory(List<Question> questions, Long categoryId) {
+        return questions.stream()
+                .filter(q -> q.getCategory() != null && categoryId.equals(q.getCategory().getId()))
+                .collect(Collectors.toList());
     }
     
-    /**
-     * Lọc câu hỏi theo ngành
-     */
-    private List<Question> filterByMajor(List<Question> questions, int majorId) {
-        List<Question> filtered = new ArrayList<>();
-        
-        for (Question question : questions) {
-            if (question.getMajor() != null && question.getMajor().getId() == majorId) {
-                filtered.add(question);
-            }
-        }
-        
-        return filtered;
+    private List<Question> filterByMajor(List<Question> questions, Long majorId) {
+        return questions.stream()
+                .filter(q -> q.getMajor() != null && majorId.equals(q.getMajor().getId()))
+                .collect(Collectors.toList());
     }
     
-    /**
-     * Lọc câu hỏi theo khoa
-     */
-    private List<Question> filterByDepartment(List<Question> questions, int departmentId) {
-        List<Question> filtered = new ArrayList<>();
-        
-        for (Question question : questions) {
-            if (question.getMajor() != null && question.getMajor().getDepartment() != null && 
-                question.getMajor().getDepartment().getId() == departmentId) {
-                filtered.add(question);
-            }
-        }
-        
-        return filtered;
+    private List<Question> filterByDepartment(List<Question> questions, Long departmentId) {
+        return questions.stream()
+                .filter(q -> q.getMajor() != null && q.getMajor().getDepartment() != null && 
+                             departmentId.equals(q.getMajor().getDepartment().getId()))
+                .collect(Collectors.toList());
     }
     
-    /**
-     * Lọc câu hỏi theo trạng thái
-     */
-    private List<Question> filterByStatus(List<Question> questions, String status) {
-        List<Question> filtered = new ArrayList<>();
-        
-        for (Question question : questions) {
-            if (status.equals(question.getStatus())) {
-                filtered.add(question);
-            }
-        }
-        
-        return filtered;
+    private List<Question> filterByStatus(List<Question> questions, Question.QuestionStatus status) {
+        return questions.stream()
+                .filter(q -> status.equals(q.getStatus()))
+                .collect(Collectors.toList());
     }
     
-    /**
-     * Sắp xếp kết quả
-     */
     private void sortResults(List<Question> questions, String sortBy) {
+        if (questions == null) return;
         switch (sortBy) {
             case "newest":
                 questions.sort((q1, q2) -> q2.getCreatedAt().compareTo(q1.getCreatedAt()));
@@ -213,7 +164,6 @@ public class AdvancedSearchController extends HttpServlet {
                 questions.sort((q1, q2) -> Integer.compare(q2.getViewCount(), q1.getViewCount()));
                 break;
             default:
-                // Mặc định sắp xếp theo thời gian tạo mới nhất
                 questions.sort((q1, q2) -> q2.getCreatedAt().compareTo(q1.getCreatedAt()));
                 break;
         }

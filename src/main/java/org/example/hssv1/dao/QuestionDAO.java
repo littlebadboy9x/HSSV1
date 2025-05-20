@@ -1,13 +1,12 @@
 package org.example.hssv1.dao;
 
 import org.example.hssv1.model.Question;
-import org.example.hssv1.model.QuestionCategory;
-import org.example.hssv1.model.Major;
 import org.example.hssv1.model.CustomUser;
-import org.example.hssv1.model.Answer;
-import org.example.hssv1.util.DatabaseConnection;
+import org.example.hssv1.util.HibernateUtil;
+import org.hibernate.Session;
+import org.hibernate.Transaction;
+import org.hibernate.query.Query;
 
-import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,421 +14,249 @@ import java.util.List;
  * DAO xử lý truy vấn dữ liệu câu hỏi
  */
 public class QuestionDAO {
-    private UserDAO userDAO;
-    private QuestionCategoryDAO categoryDAO;
-    private MajorDAO majorDAO;
-    
     public QuestionDAO() {
-        userDAO = new UserDAO();
-        categoryDAO = new QuestionCategoryDAO();
-        majorDAO = new MajorDAO();
+        // Empty constructor
     }
     
-    /**
-     * Lấy tất cả câu hỏi
-     */
-    public List<Question> getAllQuestions() {
-        List<Question> questions = new ArrayList<>();
-        String sql = "SELECT * FROM questions ORDER BY created_at DESC";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-            
-            while (rs.next()) {
-                questions.add(extractQuestionFromResultSet(rs));
+    public Question findById(Long id) {
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            return session.get(Question.class, id);
+        } catch (Exception e) {
+            e.printStackTrace(); // Consider proper logging
+            return null;
+        }
+    }
+
+    public boolean saveQuestion(Question question) {
+        Transaction transaction = null;
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            transaction = session.beginTransaction();
+            session.persist(question);
+            transaction.commit();
+            return true;
+        } catch (Exception e) {
+            if (transaction != null) {
+                transaction.rollback();
             }
-        } catch (SQLException e) {
             e.printStackTrace();
-        }
-        
-        return questions;
-    }
-    
-    /**
-     * Lấy câu hỏi theo ID
-     */
-    public Question getQuestionById(int id) {
-        String sql = "SELECT * FROM questions WHERE id = ?";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setInt(1, id);
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    Question question = extractQuestionFromResultSet(rs);
-                    // Tăng lượt xem
-                    incrementViewCount(id);
-                    return question;
-                }
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        
-        return null;
-    }
-    
-    /**
-     * Tăng lượt xem câu hỏi
-     */
-    private void incrementViewCount(int questionId) {
-        String sql = "UPDATE questions SET view_count = view_count + 1 WHERE id = ?";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setInt(1, questionId);
-            stmt.executeUpdate();
-            
-        } catch (SQLException e) {
-            e.printStackTrace();
+            return false;
         }
     }
-    
-    /**
-     * Lấy danh sách câu hỏi theo loại
-     */
-    public List<Question> getQuestionsByCategoryId(int categoryId) {
-        List<Question> questions = new ArrayList<>();
-        String sql = "SELECT * FROM questions WHERE category_id = ? ORDER BY created_at DESC";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setInt(1, categoryId);
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    questions.add(extractQuestionFromResultSet(rs));
-                }
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        
-        return questions;
-    }
-    
-    /**
-     * Lấy danh sách câu hỏi theo ngành
-     */
-    public List<Question> getQuestionsByMajorId(int majorId) {
-        List<Question> questions = new ArrayList<>();
-        String sql = "SELECT * FROM questions WHERE major_id = ? ORDER BY created_at DESC";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setInt(1, majorId);
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    questions.add(extractQuestionFromResultSet(rs));
-                }
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        
-        return questions;
-    }
-    
-    /**
-     * Lấy danh sách câu hỏi theo trạng thái
-     */
-    public List<Question> getQuestionsByStatus(String status) {
-        List<Question> questions = new ArrayList<>();
-        String sql = "SELECT * FROM questions WHERE status = ? ORDER BY created_at DESC";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setString(1, status);
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    questions.add(extractQuestionFromResultSet(rs));
-                }
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        
-        return questions;
-    }
-    
-    /**
-     * Tìm kiếm câu hỏi theo từ khóa
-     */
-    public List<Question> searchQuestions(String keyword) {
-        List<Question> questions = new ArrayList<>();
-        String sql = "SELECT * FROM questions WHERE title LIKE ? OR content LIKE ? ORDER BY created_at DESC";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            String searchTerm = "%" + keyword + "%";
-            stmt.setString(1, searchTerm);
-            stmt.setString(2, searchTerm);
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    questions.add(extractQuestionFromResultSet(rs));
-                }
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        
-        return questions;
-    }
-    
-    /**
-     * Lấy các câu hỏi mới được trả lời
-     */
-    public List<Question> getRecentAnsweredQuestions(int limit) {
-        List<Question> questions = new ArrayList<>();
-        String sql = "SELECT q.* FROM questions q " +
-                     "INNER JOIN answers a ON q.id = a.question_id " +
-                     "WHERE q.status = 'answered' " +
-                     "GROUP BY q.id " +
-                     "ORDER BY MAX(a.created_at) DESC " +
-                     "LIMIT ?";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setInt(1, limit);
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    questions.add(extractQuestionFromResultSet(rs));
-                }
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        
-        return questions;
-    }
-    
-    /**
-     * Lấy các câu hỏi phổ biến (nhiều lượt xem)
-     */
-    public List<Question> getPopularQuestions(int limit) {
-        List<Question> questions = new ArrayList<>();
-        String sql = "SELECT * FROM questions ORDER BY view_count DESC LIMIT ?";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setInt(1, limit);
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    questions.add(extractQuestionFromResultSet(rs));
-                }
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        
-        return questions;
-    }
-    
-    /**
-     * Tạo câu hỏi mới
-     */
-    public int createQuestion(Question question) {
-        String sql = "INSERT INTO questions (user_id, title, content, category_id, status, view_count, created_at, updated_at) " +
-                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            
-            stmt.setInt(1, question.getUser().getId());
-            stmt.setString(2, question.getTitle());
-            stmt.setString(3, question.getContent());
-            stmt.setInt(4, question.getCategory() != null ? question.getCategory().getId() : null);
-            stmt.setString(5, question.getStatus());
-            stmt.setInt(6, question.getViewCount());
-            stmt.setTimestamp(7, question.getCreatedAt());
-            stmt.setTimestamp(8, question.getUpdatedAt());
-            
-            int affectedRows = stmt.executeUpdate();
-            
-            if (affectedRows > 0) {
-                try (ResultSet rs = stmt.getGeneratedKeys()) {
-                    if (rs.next()) {
-                        return rs.getInt(1);
-                    }
-                }
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        
-        return -1;
-    }
-    
-    /**
-     * Cập nhật câu hỏi
-     */
+
     public boolean updateQuestion(Question question) {
-        String sql = "UPDATE questions SET title = ?, content = ?, category_id = ?, " +
-                     "status = ?, updated_at = ? WHERE id = ?";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setString(1, question.getTitle());
-            stmt.setString(2, question.getContent());
-            stmt.setInt(3, question.getCategory() != null ? question.getCategory().getId() : null);
-            stmt.setString(4, question.getStatus());
-            stmt.setTimestamp(5, new Timestamp(System.currentTimeMillis()));
-            stmt.setInt(6, question.getId());
-            
-            return stmt.executeUpdate() > 0;
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
-    
-    /**
-     * Cập nhật trạng thái câu hỏi
-     */
-    public boolean updateQuestionStatus(int questionId, String status) {
-        String sql = "UPDATE questions SET status = ?, updated_at = ? WHERE id = ?";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setString(1, status);
-            stmt.setTimestamp(2, new Timestamp(System.currentTimeMillis()));
-            stmt.setInt(3, questionId);
-            
-            return stmt.executeUpdate() > 0;
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
-    
-    /**
-     * Xóa câu hỏi
-     */
-    public boolean deleteQuestion(int id) {
-        String sql = "DELETE FROM questions WHERE id = ?";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setInt(1, id);
-            
-            return stmt.executeUpdate() > 0;
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
-    
-    /**
-     * Trích xuất đối tượng Question từ ResultSet
-     */
-    private Question extractQuestionFromResultSet(ResultSet rs) throws SQLException {
-        Question question = new Question();
-        question.setId(rs.getInt("id"));
-        question.setTitle(rs.getString("title"));
-        question.setContent(rs.getString("content"));
-        question.setStatus(rs.getString("status"));
-        question.setViewCount(rs.getInt("view_count"));
-        question.setCreatedAt(rs.getTimestamp("created_at"));
-        question.setUpdatedAt(rs.getTimestamp("updated_at"));
-        
-        // Lấy thông tin người dùng
-        int userId = rs.getInt("user_id");
-        if (!rs.wasNull()) {
-            CustomUser user = userDAO.getUserById(userId);
-            question.setUser(user);
-        }
-        
-        // Lấy thông tin loại câu hỏi
-        int categoryId = rs.getInt("category_id");
-        if (!rs.wasNull()) {
-            QuestionCategory category = categoryDAO.getCategoryById(categoryId);
-            question.setCategory(category);
-        }
-        
-        // Lấy thông tin ngành học
-        int majorId = rs.getInt("major_id");
-        if (!rs.wasNull()) {
-            Major major = majorDAO.getMajorById(majorId);
-            question.setMajor(major);
-        }
-        
-        return question;
-    }
-    
-    /**
-     * Lấy danh sách câu hỏi chưa được trả lời trong một khoa
-     */
-    public List<Question> getUnansweredQuestionsByDepartment(int departmentId) {
-        List<Question> questions = new ArrayList<>();
-        String sql = "SELECT DISTINCT q.* FROM questions q " +
-                    "INNER JOIN users u ON q.user_id = u.id " +
-                    "LEFT JOIN advisor_profiles ap ON u.id = ap.user_id " +
-                    "LEFT JOIN answers a ON q.id = a.question_id " +
-                    "WHERE (ap.department_id = ? OR q.user_id IN " +
-                    "(SELECT user_id FROM advisor_profiles WHERE department_id = ?)) " +
-                    "AND a.id IS NULL " +
-                    "ORDER BY q.created_at DESC";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setInt(1, departmentId);
-            stmt.setInt(2, departmentId);
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    questions.add(extractQuestionFromResultSet(rs));
-                }
+        Transaction transaction = null;
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            transaction = session.beginTransaction();
+            session.merge(question);
+            transaction.commit();
+            return true;
+        } catch (Exception e) {
+            if (transaction != null) {
+                transaction.rollback();
             }
-        } catch (SQLException e) {
             e.printStackTrace();
+            return false;
         }
-        
-        return questions;
+    }
+
+    public List<Question> getAllQuestions() {
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            return session.createQuery("FROM Question q ORDER BY q.createdAt DESC", Question.class).list();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+    public List<Question> getRecentQuestions(int limit) {
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            return session.createQuery("FROM Question q ORDER BY q.createdAt DESC", Question.class)
+                          .setMaxResults(limit)
+                          .list();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+    public List<Question> getRecentAnsweredQuestions(int limit) {
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            List<Question.QuestionStatus> statuses = new ArrayList<>();
+            statuses.add(Question.QuestionStatus.ANSWERED);
+            statuses.add(Question.QuestionStatus.CLOSED);
+
+            return session.createQuery(
+                            "FROM Question q WHERE q.status IN (:statuses) ORDER BY q.updatedAt DESC", Question.class)
+                    .setParameterList("statuses", statuses)
+                    .setMaxResults(limit)
+                    .list();
+        } catch (Exception e) {
+            e.printStackTrace(); // Consider proper logging
+            return new ArrayList<>();
+        }
+    }
+
+    public List<Question> getPopularQuestions(int limit) {
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            return session.createQuery("FROM Question q ORDER BY q.viewCount DESC, q.createdAt DESC", Question.class)
+                          .setMaxResults(limit)
+                          .list();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+    public List<Question> findByKeyword(String keyword) {
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            Query<Question> query = session.createQuery("FROM Question q WHERE lower(q.title) LIKE lower(:keyword) OR lower(q.content) LIKE lower(:keyword) ORDER BY q.createdAt DESC", Question.class);
+            query.setParameter("keyword", "%" + keyword.toLowerCase() + "%");
+            return query.list();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
     }
     
-    /**
-     * Lấy danh sách câu hỏi đã được một cố vấn trả lời
-     */
-    public List<Question> getAnsweredQuestionsByAdvisor(int advisorId) {
-        List<Question> questions = new ArrayList<>();
-        String sql = "SELECT DISTINCT q.* FROM questions q " +
-                    "INNER JOIN answers a ON q.id = a.question_id " +
-                    "WHERE a.user_id = ? " +
-                    "ORDER BY q.created_at DESC";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setInt(1, advisorId);
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    questions.add(extractQuestionFromResultSet(rs));
-                }
-            }
-        } catch (SQLException e) {
+    public List<Question> findByUser(CustomUser user) {
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            Query<Question> query = session.createQuery("FROM Question q WHERE q.user = :user ORDER BY q.createdAt DESC", Question.class);
+            query.setParameter("user", user);
+            return query.list();
+        } catch (Exception e) {
             e.printStackTrace();
+            return new ArrayList<>();
         }
-        
-        return questions;
+    }
+    
+    public List<Question> findByUserId(Long userId) {
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            Query<Question> query = session.createQuery("FROM Question q WHERE q.user.id = :userId ORDER BY q.createdAt DESC", Question.class);
+            query.setParameter("userId", userId);
+            return query.list();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+    public boolean deleteQuestion(Long id) {
+        Transaction transaction = null;
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            transaction = session.beginTransaction();
+            Question question = session.get(Question.class, id);
+            if (question != null) {
+                session.remove(question);
+                transaction.commit();
+                return true;
+            }
+            return false;
+        } catch (Exception e) {
+            if (transaction != null) {
+                transaction.rollback();
+            }
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    public boolean incrementViewCount(Long questionId) {
+        Transaction transaction = null;
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            transaction = session.beginTransaction();
+            Question question = session.get(Question.class, questionId);
+            if (question != null) {
+                question.setViewCount(question.getViewCount() + 1);
+                session.merge(question);
+                transaction.commit();
+                return true;
+            }
+            return false;
+        } catch (Exception e) {
+            if (transaction != null) {
+                transaction.rollback();
+            }
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    public List<Question> findByCategoryId(Long categoryId) {
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            Query<Question> query = session.createQuery("FROM Question q WHERE q.category.id = :categoryId ORDER BY q.createdAt DESC", Question.class);
+            query.setParameter("categoryId", categoryId);
+            return query.list();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+    
+    public List<Question> findByMajorId(Long majorId) {
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            Query<Question> query = session.createQuery("FROM Question q WHERE q.major.id = :majorId ORDER BY q.createdAt DESC", Question.class);
+            query.setParameter("majorId", majorId);
+            return query.list();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+    
+    public List<Question> findByStatus(Question.QuestionStatus status) {
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            Query<Question> query = session.createQuery("FROM Question q WHERE q.status = :status ORDER BY q.createdAt DESC", Question.class);
+            query.setParameter("status", status);
+            return query.list();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+    public List<Question> findByDepartmentId(Long departmentId) {
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            Query<Question> query = session.createQuery("FROM Question q WHERE q.major.department.id = :departmentId ORDER BY q.createdAt DESC", Question.class);
+            query.setParameter("departmentId", departmentId);
+            return query.list();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+    public List<Question> findUnansweredByDepartmentId(Long departmentId) {
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            Query<Question> query = session.createQuery(
+                "FROM Question q WHERE q.major.department.id = :departmentId AND q.status = :status ORDER BY q.createdAt ASC", 
+                Question.class
+            );
+            query.setParameter("departmentId", departmentId);
+            query.setParameter("status", Question.QuestionStatus.PENDING);
+            return query.list();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+    public List<Question> findAnsweredByUserId(Long userId) {
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            // Find questions that have at least one answer from the specified user
+            // and the question status is ANSWERED or CLOSED.
+            Query<Question> query = session.createQuery(
+                "SELECT DISTINCT q FROM Question q JOIN q.answers a WHERE a.user.id = :userId AND q.status IN (:statuses) ORDER BY q.updatedAt DESC", 
+                Question.class
+            );
+            query.setParameter("userId", userId);
+            List<Question.QuestionStatus> statuses = new ArrayList<>();
+            statuses.add(Question.QuestionStatus.ANSWERED);
+            statuses.add(Question.QuestionStatus.CLOSED);
+            query.setParameterList("statuses", statuses);
+            return query.list();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
     }
 }

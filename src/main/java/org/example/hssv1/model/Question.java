@@ -1,62 +1,76 @@
 package org.example.hssv1.model;
 
-import java.sql.Timestamp;
-import java.util.ArrayList;
+import jakarta.persistence.*;
+import java.util.Date;
 import java.util.List;
 
-/**
- * Mô hình Câu hỏi
- */
+@Entity
+@Table(name = "questions")
 public class Question {
-    private int id;
-    private CustomUser user;
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, length = 255)
     private String title;
+
+    @Lob // For potentially long text
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
-    private Major major;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private QuestionStatus status = QuestionStatus.PENDING; // Default status
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private CustomUser user;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id", nullable = false)
     private QuestionCategory category;
-    private String status;
-    private int viewCount;
-    private Timestamp createdAt;
-    private Timestamp updatedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "major_id") // Nullable, as it's optional
+    private Major major;
+
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Date createdAt = new Date();
+
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "updated_at", nullable = false)
+    private Date updatedAt = new Date();
+    
+    @Column(name = "view_count", nullable = false, columnDefinition = "INT DEFAULT 0")
+    private int viewCount = 0;
+
+    @OneToMany(mappedBy = "question", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Answer> answers;
 
+    // Constructors
     public Question() {
-        this.answers = new ArrayList<>();
-        this.status = "pending"; // Mặc định là đang chờ
+    }
+
+    public Question(String title, String content, CustomUser user, QuestionCategory category) {
+        this.title = title;
+        this.content = content;
+        this.user = user;
+        this.category = category;
+        this.status = QuestionStatus.PENDING;
+        this.createdAt = new Date();
+        this.updatedAt = new Date();
         this.viewCount = 0;
     }
 
-    public Question(int id, CustomUser user, String title, String content, Major major,
-                   QuestionCategory category, String status, int viewCount,
-                   Timestamp createdAt, Timestamp updatedAt) {
-        this.id = id;
-        this.user = user;
-        this.title = title;
-        this.content = content;
-        this.major = major;
-        this.category = category;
-        this.status = status;
-        this.viewCount = viewCount;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
-        this.answers = new ArrayList<>();
-    }
-
-    // Getters và Setters
-    public int getId() {
+    // Getters and Setters
+    public Long getId() {
         return id;
     }
 
-    public void setId(int id) {
+    public void setId(Long id) {
         this.id = id;
-    }
-
-    public CustomUser getUser() {
-        return user;
-    }
-
-    public void setUser(CustomUser user) {
-        this.user = user;
     }
 
     public String getTitle() {
@@ -75,12 +89,20 @@ public class Question {
         this.content = content;
     }
 
-    public Major getMajor() {
-        return major;
+    public QuestionStatus getStatus() {
+        return status;
     }
 
-    public void setMajor(Major major) {
-        this.major = major;
+    public void setStatus(QuestionStatus status) {
+        this.status = status;
+    }
+
+    public CustomUser getUser() {
+        return user;
+    }
+
+    public void setUser(CustomUser user) {
+        this.user = user;
     }
 
     public QuestionCategory getCategory() {
@@ -91,12 +113,28 @@ public class Question {
         this.category = category;
     }
 
-    public String getStatus() {
-        return status;
+    public Major getMajor() {
+        return major;
     }
 
-    public void setStatus(String status) {
-        this.status = status;
+    public void setMajor(Major major) {
+        this.major = major;
+    }
+
+    public Date getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Date createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public Date getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(Date updatedAt) {
+        this.updatedAt = updatedAt;
     }
 
     public int getViewCount() {
@@ -107,22 +145,6 @@ public class Question {
         this.viewCount = viewCount;
     }
 
-    public Timestamp getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Timestamp createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public Timestamp getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(Timestamp updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
     public List<Answer> getAnswers() {
         return answers;
     }
@@ -131,15 +153,20 @@ public class Question {
         this.answers = answers;
     }
 
-    public void addAnswer(Answer answer) {
-        this.answers.add(answer);
+    @PrePersist
+    protected void onCreate() {
+        createdAt = new Date();
+        updatedAt = new Date();
+        status = QuestionStatus.PENDING; // Ensure status is PENDING on creation
     }
 
-    public boolean isAnswered() {
-        return "answered".equals(status);
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = new Date();
     }
 
-    public boolean isPending() {
-        return "pending".equals(status);
+    // Enum for Question Status
+    public enum QuestionStatus {
+        PENDING, ANSWERED, CLOSED // CLOSED might be useful later
     }
 } 

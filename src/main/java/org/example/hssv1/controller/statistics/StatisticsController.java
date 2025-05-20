@@ -3,14 +3,15 @@ package org.example.hssv1.controller.statistics;
 import org.example.hssv1.dao.*;
 import org.example.hssv1.model.*;
 
-import javax.servlet.ServletException;
-import javax.servlet.annotation.WebServlet;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Controller xử lý hiển thị thống kê
@@ -25,7 +26,7 @@ public class StatisticsController extends HttpServlet {
     private QuestionCategoryDAO categoryDAO;
     
     @Override
-    public void init() throws ServletException {
+    public void init() {
         questionDAO = new QuestionDAO();
         answerDAO = new AnswerDAO();
         departmentDAO = new DepartmentDAO();
@@ -33,26 +34,37 @@ public class StatisticsController extends HttpServlet {
         categoryDAO = new QuestionCategoryDAO();
     }
     
+    private boolean isAdmin(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            CustomUser loggedInUser = (CustomUser) session.getAttribute("user");
+            if (loggedInUser != null) {
+                if (loggedInUser.isSuperuser()) {
+                    return true;
+                }
+                AdvisorProfile profile = loggedInUser.getAdvisorProfile();
+                return profile != null && profile.getRole() == AdvisorProfile.AdvisorRole.ADMIN;
+            }
+        }
+        return false;
+    }
+    
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
         
-        // Kiểm tra quyền admin
-        HttpSession session = request.getSession();
-        Boolean isAdmin = (Boolean) session.getAttribute("isAdmin");
-        
-        if (isAdmin == null || !isAdmin) {
-            response.sendRedirect(request.getContextPath() + "/");
+        if (!isAdmin(request)) {
+            response.sendRedirect(request.getContextPath() + "/login?error=unauthorized");
             return;
         }
         
-        // Lấy tham số thống kê
         String type = request.getParameter("type");
-        if (type == null) {
-            type = "overview"; // Mặc định là tổng quan
+        if (type == null || type.trim().isEmpty()) {
+            type = "overview"; 
+        } else {
+            type = type.trim();
         }
         
-        // Xử lý các loại thống kê
         switch (type) {
             case "by_department":
                 processDepartmentStatistics(request);
@@ -66,6 +78,7 @@ public class StatisticsController extends HttpServlet {
             case "by_status":
                 processStatusStatistics(request);
                 break;
+            case "overview":
             default:
                 processOverviewStatistics(request);
                 break;
@@ -79,27 +92,22 @@ public class StatisticsController extends HttpServlet {
      * Xử lý thống kê tổng quan
      */
     private void processOverviewStatistics(HttpServletRequest request) {
-        // Tổng số câu hỏi
         List<Question> allQuestions = questionDAO.getAllQuestions();
         int totalQuestions = allQuestions.size();
         
-        // Số câu hỏi đã trả lời
-        long answeredQuestions = allQuestions.stream()
-                .filter(q -> "answered".equals(q.getStatus()))
+        long answeredCount = allQuestions.stream()
+                .filter(q -> q.getStatus() == Question.QuestionStatus.ANSWERED || q.getStatus() == Question.QuestionStatus.CLOSED)
                 .count();
         
-        // Số câu hỏi đang chờ
-        long pendingQuestions = allQuestions.stream()
-                .filter(q -> "pending".equals(q.getStatus()))
+        long pendingCount = allQuestions.stream()
+                .filter(q -> q.getStatus() == Question.QuestionStatus.PENDING)
                 .count();
         
-        // Tỷ lệ trả lời
-        double responseRate = totalQuestions > 0 ? (double) answeredQuestions / totalQuestions * 100 : 0;
+        double responseRate = totalQuestions > 0 ? (double) answeredCount / totalQuestions * 100 : 0;
         
-        // Đặt thuộc tính vào request
         request.setAttribute("totalQuestions", totalQuestions);
-        request.setAttribute("answeredQuestions", answeredQuestions);
-        request.setAttribute("pendingQuestions", pendingQuestions);
+        request.setAttribute("answeredQuestions", answeredCount);
+        request.setAttribute("pendingQuestions", pendingCount);
         request.setAttribute("responseRate", responseRate);
     }
     
@@ -108,21 +116,14 @@ public class StatisticsController extends HttpServlet {
      */
     private void processDepartmentStatistics(HttpServletRequest request) {
         List<Department> departments = departmentDAO.getAllDepartments();
-        Map<Department, Integer> departmentStats = new HashMap<>();
+        Map<String, Long> departmentStats = new LinkedHashMap<>();
         
-        for (Department department : departments) {
-            // Đếm số câu hỏi liên quan đến các ngành thuộc khoa
-            List<Major> majors = majorDAO.getMajorsByDepartmentId(department.getId());
-            int count = 0;
-            
-            for (Major major : majors) {
-                List<Question> questions = questionDAO.getQuestionsByMajorId(major.getId());
-                count += questions.size();
+        if (departments != null) {
+            for (Department department : departments) {
+                List<Question> questionsInDept = questionDAO.findByDepartmentId(department.getId());
+                departmentStats.put(department.getName(), questionsInDept != null ? (long)questionsInDept.size() : 0L);
             }
-            
-            departmentStats.put(department, count);
         }
-        
         request.setAttribute("departmentStats", departmentStats);
     }
     
@@ -131,13 +132,15 @@ public class StatisticsController extends HttpServlet {
      */
     private void processMajorStatistics(HttpServletRequest request) {
         List<Major> majors = majorDAO.getAllMajors();
-        Map<Major, Integer> majorStats = new HashMap<>();
+        Map<String, Long> majorStats = new LinkedHashMap<>();
         
-        for (Major major : majors) {
-            List<Question> questions = questionDAO.getQuestionsByMajorId(major.getId());
-            majorStats.put(major, questions.size());
+        if (majors != null) {
+            for (Major major : majors) {
+                List<Question> questionsInMajor = questionDAO.findByMajorId(major.getId());
+                majorStats.put(major.getName() + (major.getDepartment()!=null ? " (" +major.getDepartment().getName() + ")" : ""), 
+                               questionsInMajor != null ? (long)questionsInMajor.size() : 0L);
+            }
         }
-        
         request.setAttribute("majorStats", majorStats);
     }
     
@@ -146,13 +149,14 @@ public class StatisticsController extends HttpServlet {
      */
     private void processCategoryStatistics(HttpServletRequest request) {
         List<QuestionCategory> categories = categoryDAO.getAllCategories();
-        Map<QuestionCategory, Integer> categoryStats = new HashMap<>();
+        Map<String, Long> categoryStats = new LinkedHashMap<>();
         
-        for (QuestionCategory category : categories) {
-            List<Question> questions = questionDAO.getQuestionsByCategoryId(category.getId());
-            categoryStats.put(category, questions.size());
+        if (categories != null) {
+            for (QuestionCategory category : categories) {
+                List<Question> questionsInCategory = questionDAO.findByCategoryId(category.getId());
+                categoryStats.put(category.getName(), questionsInCategory != null ? (long)questionsInCategory.size() : 0L);
+            }
         }
-        
         request.setAttribute("categoryStats", categoryStats);
     }
     
@@ -160,12 +164,24 @@ public class StatisticsController extends HttpServlet {
      * Xử lý thống kê theo trạng thái
      */
     private void processStatusStatistics(HttpServletRequest request) {
-        List<Question> answeredQuestions = questionDAO.getQuestionsByStatus("answered");
-        List<Question> pendingQuestions = questionDAO.getQuestionsByStatus("pending");
+        Map<String, Long> statusStats = new LinkedHashMap<>();
         
-        Map<String, Integer> statusStats = new HashMap<>();
-        statusStats.put("answered", answeredQuestions.size());
-        statusStats.put("pending", pendingQuestions.size());
+        List<Question> allQuestions = questionDAO.getAllQuestions();
+
+        long answeredCount = allQuestions.stream()
+            .filter(q -> q.getStatus() == Question.QuestionStatus.ANSWERED)
+            .count();
+        statusStats.put("Đã trả lời (Answered)", answeredCount);
+
+        long pendingCount = allQuestions.stream()
+            .filter(q -> q.getStatus() == Question.QuestionStatus.PENDING)
+            .count();
+        statusStats.put("Đang chờ (Pending)", pendingCount);
+
+        long closedCount = allQuestions.stream()
+            .filter(q -> q.getStatus() == Question.QuestionStatus.CLOSED)
+            .count();
+        statusStats.put("Đã đóng (Closed)", closedCount);
         
         request.setAttribute("statusStats", statusStats);
     }

@@ -2,18 +2,19 @@ package org.example.hssv1.controller.questions;
 
 import org.example.hssv1.dao.QuestionDAO;
 import org.example.hssv1.dao.AnswerDAO;
+import org.example.hssv1.dao.AdvisorProfileDAO;
 import org.example.hssv1.model.Question;
 import org.example.hssv1.model.Answer;
 import org.example.hssv1.model.CustomUser;
+import org.example.hssv1.model.AdvisorProfile;
 
-import javax.servlet.ServletException;
-import javax.servlet.annotation.WebServlet;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
-import java.sql.Timestamp;
 import java.util.List;
 
 /**
@@ -24,46 +25,49 @@ public class QuestionDetailController extends HttpServlet {
     private static final long serialVersionUID = 1L;
     private QuestionDAO questionDAO;
     private AnswerDAO answerDAO;
+    private AdvisorProfileDAO advisorProfileDAO;
     
     @Override
-    public void init() throws ServletException {
+    public void init() {
         questionDAO = new QuestionDAO();
         answerDAO = new AnswerDAO();
+        advisorProfileDAO = new AdvisorProfileDAO();
     }
     
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
         
-        // Lấy ID câu hỏi từ tham số
         String questionIdStr = request.getParameter("id");
         
         if (questionIdStr == null || questionIdStr.isEmpty()) {
-            response.sendRedirect(request.getContextPath() + "/questions");
+            response.sendRedirect(request.getContextPath() + "/questions/list");
             return;
         }
         
         try {
-            int questionId = Integer.parseInt(questionIdStr);
-            Question question = questionDAO.getQuestionById(questionId);
+            Long questionId = Long.parseLong(questionIdStr);
+            Question question = questionDAO.findById(questionId);
             
             if (question == null) {
-                response.sendRedirect(request.getContextPath() + "/questions");
+                request.setAttribute("errorMessage", "Câu hỏi không tồn tại.");
+                request.getRequestDispatcher("/WEB-INF/views/error.jsp").forward(request, response);
                 return;
             }
             
-            // Lấy danh sách câu trả lời cho câu hỏi
-            List<Answer> answers = answerDAO.getAnswersByQuestionId(questionId);
+            questionDAO.incrementViewCount(questionId);
             
-            // Đặt thuộc tính vào request
+            List<Answer> answers = answerDAO.findByQuestionId(questionId);
+            
             request.setAttribute("question", question);
             request.setAttribute("answers", answers);
             
-            // Forward đến trang chi tiết câu hỏi
             request.getRequestDispatcher("/WEB-INF/views/questions/detail.jsp").forward(request, response);
             
         } catch (NumberFormatException e) {
-            response.sendRedirect(request.getContextPath() + "/questions");
+            e.printStackTrace();
+            request.setAttribute("errorMessage", "ID câu hỏi không hợp lệ.");
+            request.getRequestDispatcher("/WEB-INF/views/error.jsp").forward(request, response);
         }
     }
     
@@ -71,67 +75,80 @@ public class QuestionDetailController extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
         
-        // Kiểm tra đăng nhập
-        HttpSession session = request.getSession();
-        CustomUser user = (CustomUser) session.getAttribute("user");
-        
-        if (user == null) {
+        request.setCharacterEncoding("UTF-8");
+        HttpSession session = request.getSession(false);
+
+        if (session == null || session.getAttribute("user") == null) {
+            session = request.getSession();
             session.setAttribute("errorMessage", "Vui lòng đăng nhập để trả lời câu hỏi.");
             response.sendRedirect(request.getContextPath() + "/login");
             return;
         }
-        
-        // Kiểm tra xem người dùng có phải là cố vấn không
-        Boolean isAdvisor = (Boolean) session.getAttribute("isAdvisor");
-        if (isAdvisor == null || !isAdvisor) {
-            session.setAttribute("errorMessage", "Chỉ cố vấn mới có thể trả lời câu hỏi.");
-            response.sendRedirect(request.getHeader("Referer"));
+
+        CustomUser user = (CustomUser) session.getAttribute("user");
+        AdvisorProfile advisorProfile = advisorProfileDAO.findByUserId(user.getId());
+
+        if (advisorProfile == null) {
+            session.setAttribute("errorMessage", "Chỉ cố vấn hoặc quản trị viên mới có thể trả lời câu hỏi.");
+            String referer = request.getHeader("Referer");
+            if (referer != null && !referer.isEmpty()) {
+                response.sendRedirect(referer);
+            } else {
+                response.sendRedirect(request.getContextPath() + "/questions/list");
+            }
             return;
         }
-        
-        // Lấy dữ liệu từ form
+
         String questionIdStr = request.getParameter("questionId");
         String content = request.getParameter("content");
         
-        // Validate dữ liệu
         if (questionIdStr == null || questionIdStr.isEmpty() || content == null || content.trim().isEmpty()) {
             request.setAttribute("errorMessage", "Vui lòng nhập nội dung câu trả lời.");
-            doGet(request, response);
+            try {
+                Long qId = Long.parseLong(questionIdStr);
+                Question question = questionDAO.findById(qId);
+                List<Answer> answers = answerDAO.findByQuestionId(qId);
+                request.setAttribute("question", question);
+                request.setAttribute("answers", answers);
+            } catch (NumberFormatException e) {
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "ID câu hỏi không hợp lệ.");
+                return;
+            }
+            request.getRequestDispatcher("/WEB-INF/views/questions/detail.jsp").forward(request, response);
             return;
         }
         
         try {
-            int questionId = Integer.parseInt(questionIdStr);
-            Question question = questionDAO.getQuestionById(questionId);
+            Long questionId = Long.parseLong(questionIdStr);
+            Question question = questionDAO.findById(questionId);
             
             if (question == null) {
-                response.sendRedirect(request.getContextPath() + "/questions");
+                session.setAttribute("errorMessage", "Câu hỏi không tồn tại.");
+                response.sendRedirect(request.getContextPath() + "/questions/list");
                 return;
             }
             
-            // Tạo đối tượng Answer
             Answer answer = new Answer();
             answer.setQuestion(question);
             answer.setUser(user);
             answer.setContent(content.trim());
-            answer.setCreatedAt(new Timestamp(System.currentTimeMillis()));
-            answer.setUpdatedAt(new Timestamp(System.currentTimeMillis()));
             
-            // Lưu câu trả lời vào database
-            int answerId = answerDAO.createAnswer(answer);
-            
-            if (answerId > 0) {
-                // Cập nhật trạng thái câu hỏi thành đã trả lời
-                questionDAO.updateQuestionStatus(questionId, "answered");
+            if (answerDAO.saveAnswer(answer)) {
+                question.setStatus(Question.QuestionStatus.ANSWERED);
+                questionDAO.updateQuestion(question);
                 
-                // Chuyển hướng đến trang chi tiết câu hỏi
+                session.setAttribute("successMessage", "Câu trả lời đã được gửi thành công.");
                 response.sendRedirect(request.getContextPath() + "/questions/detail?id=" + questionId);
             } else {
-                request.setAttribute("errorMessage", "Có lỗi xảy ra khi tạo câu trả lời. Vui lòng thử lại.");
-                doGet(request, response);
+                request.setAttribute("errorMessage", "Có lỗi xảy ra khi lưu câu trả lời. Vui lòng thử lại.");
+                List<Answer> answers = answerDAO.findByQuestionId(questionId);
+                request.setAttribute("question", question);
+                request.setAttribute("answers", answers);
+                request.getRequestDispatcher("/WEB-INF/views/questions/detail.jsp").forward(request, response);
             }
         } catch (NumberFormatException e) {
-            response.sendRedirect(request.getContextPath() + "/questions");
+            session.setAttribute("errorMessage", "ID câu hỏi không hợp lệ.");
+            response.sendRedirect(request.getContextPath() + "/questions/list");
         }
     }
 } 

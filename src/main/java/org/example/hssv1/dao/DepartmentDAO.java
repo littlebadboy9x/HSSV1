@@ -1,10 +1,11 @@
 package org.example.hssv1.dao;
 
 import org.example.hssv1.model.Department;
-import org.example.hssv1.util.DatabaseConnection;
+import org.example.hssv1.util.HibernateUtil;
+import org.hibernate.Session;
+import org.hibernate.Transaction;
+import org.hibernate.query.Query;
 
-import java.sql.*;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -15,113 +16,74 @@ public class DepartmentDAO {
     /**
      * Lấy khoa theo ID
      */
-    public Department getDepartmentById(int id) {
-        String sql = "SELECT * FROM departments WHERE id = ?";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setInt(1, id);
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return extractDepartmentFromResultSet(rs);
-                }
-            }
-        } catch (SQLException e) {
+    public Department findById(Long id) {
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            return session.get(Department.class, id);
+        } catch (Exception e) {
             e.printStackTrace();
+            return null;
         }
-        
-        return null;
+    }
+    
+    /**
+     * Lấy khoa theo tên
+     */
+    public Department findByName(String name) {
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            Query<Department> query = session.createQuery("FROM Department WHERE name = :name", Department.class);
+            query.setParameter("name", name);
+            return query.uniqueResult();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
     
     /**
      * Lấy tất cả khoa
      */
     public List<Department> getAllDepartments() {
-        List<Department> departments = new ArrayList<>();
-        String sql = "SELECT * FROM departments ORDER BY name";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-            
-            while (rs.next()) {
-                departments.add(extractDepartmentFromResultSet(rs));
-            }
-        } catch (SQLException e) {
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            return session.createQuery("FROM Department ORDER BY name ASC", Department.class).list();
+        } catch (Exception e) {
             e.printStackTrace();
+            return null;
         }
-        
-        return departments;
-    }
-    
-    /**
-     * Lấy danh sách khoa hoạt động
-     */
-    public List<Department> getActiveDepartments() {
-        List<Department> departments = new ArrayList<>();
-        String sql = "SELECT * FROM departments WHERE is_active = true ORDER BY name";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-            
-            while (rs.next()) {
-                departments.add(extractDepartmentFromResultSet(rs));
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        
-        return departments;
     }
     
     /**
      * Tạo khoa mới
      */
-    public int createDepartment(Department department) {
-        String sql = "INSERT INTO departments (name, description, is_active) VALUES (?, ?, ?)";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            
-            stmt.setString(1, department.getName());
-            stmt.setString(2, department.getDescription());
-            stmt.setBoolean(3, department.isActive());
-            
-            int affectedRows = stmt.executeUpdate();
-            
-            if (affectedRows > 0) {
-                try (ResultSet rs = stmt.getGeneratedKeys()) {
-                    if (rs.next()) {
-                        return rs.getInt(1);
-                    }
-                }
+    public boolean saveDepartment(Department department) {
+        Transaction transaction = null;
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            transaction = session.beginTransaction();
+            session.persist(department);
+            transaction.commit();
+            return true;
+        } catch (Exception e) {
+            if (transaction != null) {
+                transaction.rollback();
             }
-        } catch (SQLException e) {
             e.printStackTrace();
+            return false;
         }
-        
-        return -1;
     }
     
     /**
      * Cập nhật thông tin khoa
      */
     public boolean updateDepartment(Department department) {
-        String sql = "UPDATE departments SET name = ?, description = ?, is_active = ? WHERE id = ?";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setString(1, department.getName());
-            stmt.setString(2, department.getDescription());
-            stmt.setBoolean(3, department.isActive());
-            stmt.setInt(4, department.getId());
-            
-            return stmt.executeUpdate() > 0;
-        } catch (SQLException e) {
+        Transaction transaction = null;
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            transaction = session.beginTransaction();
+            session.merge(department);
+            transaction.commit();
+            return true;
+        } catch (Exception e) {
+            if (transaction != null) {
+                transaction.rollback();
+            }
             e.printStackTrace();
             return false;
         }
@@ -130,30 +92,30 @@ public class DepartmentDAO {
     /**
      * Xóa khoa
      */
-    public boolean deleteDepartment(int id) {
-        String sql = "DELETE FROM departments WHERE id = ?";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setInt(1, id);
-            
-            return stmt.executeUpdate() > 0;
-        } catch (SQLException e) {
+    public boolean deleteDepartment(Long id) {
+        Transaction transaction = null;
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            transaction = session.beginTransaction();
+            Department department = session.get(Department.class, id);
+            if (department != null) {
+                if ((department.getMajors() == null || department.getMajors().isEmpty()) &&
+                    (department.getAdvisorProfiles() == null || department.getAdvisorProfiles().isEmpty())) {
+                    session.remove(department);
+                    transaction.commit();
+                    return true;
+                } else {
+                    if (transaction != null) transaction.rollback();
+                    System.err.println("Cannot delete department: It has associated majors or advisor profiles.");
+                    return false; 
+                }
+            }
+            return false; // Department not found
+        } catch (Exception e) {
+            if (transaction != null) {
+                transaction.rollback();
+            }
             e.printStackTrace();
             return false;
         }
-    }
-    
-    /**
-     * Trích xuất đối tượng Department từ ResultSet
-     */
-    private Department extractDepartmentFromResultSet(ResultSet rs) throws SQLException {
-        Department department = new Department();
-        department.setId(rs.getInt("id"));
-        department.setName(rs.getString("name"));
-        department.setDescription(rs.getString("description"));
-        department.setActive(rs.getBoolean("is_active"));
-        return department;
     }
 }

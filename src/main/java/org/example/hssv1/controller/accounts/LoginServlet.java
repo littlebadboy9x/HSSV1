@@ -5,12 +5,12 @@ import org.example.hssv1.dao.UserDAO;
 import org.example.hssv1.model.AdvisorProfile;
 import org.example.hssv1.model.CustomUser;
 
-import javax.servlet.ServletException;
-import javax.servlet.annotation.WebServlet;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 
 /**
@@ -24,8 +24,7 @@ public class LoginServlet extends HttpServlet {
     private AdvisorProfileDAO advisorProfileDAO;
     
     @Override
-    public void init() throws ServletException {
-        super.init();
+    public void init() {
         userDAO = new UserDAO();
         advisorProfileDAO = new AdvisorProfileDAO();
     }
@@ -54,41 +53,50 @@ public class LoginServlet extends HttpServlet {
         String rememberMe = request.getParameter("rememberMe");
         
         // Xác thực người dùng
-        CustomUser user = userDAO.authenticate(username, password);
+        CustomUser user = userDAO.authenticateByUsername(username, password);
         
         if (user != null) {
             // Tạo phiên đăng nhập
             HttpSession session = request.getSession();
             session.setAttribute("user", user);
             
-            // Kiểm tra xem người dùng có phải là tư vấn viên không
-            AdvisorProfile advisorProfile = advisorProfileDAO.getByUserId(user.getId());
+            boolean sessionIsAdmin = user.isSuperuser();
+            boolean sessionIsAdvisor = false;
+            
+            AdvisorProfile advisorProfile = advisorProfileDAO.findByUserId(user.getId());
             if (advisorProfile != null) {
                 session.setAttribute("advisorProfile", advisorProfile);
-                session.setAttribute("isAdvisor", true);
-                String role = advisorProfileDAO.getRole(advisorProfile.getId());
-                session.setAttribute("isAdmin", "admin".equals(role));
+                sessionIsAdvisor = true;
+                if (advisorProfile.getRole() == AdvisorProfile.AdvisorRole.ADMIN) {
+                    sessionIsAdmin = true;
+                }
             } else {
-                session.setAttribute("isAdvisor", false);
-                session.setAttribute("isAdmin", false);
+                session.removeAttribute("advisorProfile");
             }
             
+            session.setAttribute("isAdmin", sessionIsAdmin);
+            session.setAttribute("isAdvisor", sessionIsAdvisor);
+            
             // Thiết lập thời gian phiên nếu chọn "Ghi nhớ đăng nhập"
-            if (rememberMe != null) {
+            if (rememberMe != null && rememberMe.equalsIgnoreCase("on")) {
                 session.setMaxInactiveInterval(7 * 24 * 60 * 60); // 7 ngày
             }
             
             // Chuyển hướng dựa vào vai trò người dùng
-            if ((Boolean) session.getAttribute("isAdmin")) {
+            String intendedURL = (String) session.getAttribute("intendedURL");
+            if (intendedURL != null && !intendedURL.isEmpty()) {
+                session.removeAttribute("intendedURL");
+                response.sendRedirect(intendedURL);
+            } else if (sessionIsAdmin) {
                 response.sendRedirect(request.getContextPath() + "/admin/users");
-            } else if ((Boolean) session.getAttribute("isAdvisor")) {
+            } else if (sessionIsAdvisor) {
                 response.sendRedirect(request.getContextPath() + "/advisor/dashboard");
             } else {
                 response.sendRedirect(request.getContextPath() + "/");
             }
         } else {
             // Đăng nhập thất bại, hiển thị thông báo lỗi
-            request.setAttribute("error", "Tên đăng nhập hoặc mật khẩu không chính xác");
+            request.setAttribute("error", "Tên đăng nhập hoặc mật khẩu không chính xác.");
             request.getRequestDispatcher("/WEB-INF/views/accounts/login.jsp").forward(request, response);
         }
     }

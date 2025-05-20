@@ -3,11 +3,11 @@ package org.example.hssv1.controller;
 import org.example.hssv1.dao.QuestionDAO;
 import org.example.hssv1.model.Question;
 
-import javax.servlet.ServletException;
-import javax.servlet.annotation.WebServlet;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
 
@@ -20,7 +20,7 @@ public class HomeController extends HttpServlet {
     private QuestionDAO questionDAO;
     
     @Override
-    public void init() throws ServletException {
+    public void init() {
         questionDAO = new QuestionDAO();
     }
     

@@ -1,11 +1,12 @@
 package org.example.hssv1.dao;
 
 import org.example.hssv1.model.Answer;
-import org.example.hssv1.model.CustomUser;
 import org.example.hssv1.model.Question;
-import org.example.hssv1.util.DatabaseConnection;
+import org.example.hssv1.util.HibernateUtil;
+import org.hibernate.Session;
+import org.hibernate.Transaction;
+import org.hibernate.query.Query;
 
-import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,35 +15,20 @@ import java.util.List;
  */
 public class AnswerDAO {
     
-    private UserDAO userDAO;
-    private QuestionDAO questionDAO;
-    
     /**
      * Constructor mặc định
      */
     public AnswerDAO() {
-        userDAO = new UserDAO();
-        questionDAO = new QuestionDAO();
+        // Empty constructor
     }
     
     /**
      * Lấy câu trả lời theo ID
      */
-    public Answer getAnswerById(int id) {
-        String sql = "SELECT * FROM answers WHERE id = ?";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
-            pstmt.setInt(1, id);
-            ResultSet rs = pstmt.executeQuery();
-            
-            if (rs.next()) {
-                return mapResultSetToAnswer(rs);
-            }
-            
-            return null;
-        } catch (SQLException e) {
+    public Answer findById(Long id) {
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            return session.get(Answer.class, id);
+        } catch (Exception e) {
             e.printStackTrace();
             return null;
         }
@@ -51,53 +37,48 @@ public class AnswerDAO {
     /**
      * Lấy tất cả câu trả lời cho một câu hỏi
      */
-    public List<Answer> getAnswersByQuestionId(int questionId) {
-        String sql = "SELECT * FROM answers WHERE question_id = ? ORDER BY created_at ASC";
-        List<Answer> answers = new ArrayList<>();
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
-            pstmt.setInt(1, questionId);
-            ResultSet rs = pstmt.executeQuery();
-            
-            while (rs.next()) {
-                answers.add(mapResultSetToAnswer(rs));
-            }
-            
-            return answers;
-        } catch (SQLException e) {
+    public List<Answer> findByQuestionId(Long questionId) {
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            Query<Answer> query = session.createQuery("FROM Answer a WHERE a.question.id = :questionId ORDER BY a.createdAt ASC", Answer.class);
+            query.setParameter("questionId", questionId);
+            return query.list();
+        } catch (Exception e) {
             e.printStackTrace();
-            return answers;
+            return new ArrayList<>();
         }
     }
     
     /**
      * Tạo câu trả lời mới
      */
-    public int createAnswer(Answer answer) {
-        String sql = "INSERT INTO answers (question_id, user_id, content) VALUES (?, ?, ?)";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+    public boolean saveAnswer(Answer answer) {
+        Transaction transaction = null;
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            transaction = session.beginTransaction();
             
-            pstmt.setInt(1, answer.getQuestion().getId());
-            pstmt.setInt(2, answer.getUser().getId());
-            pstmt.setString(3, answer.getContent());
-            
-            int affectedRows = pstmt.executeUpdate();
-            
-            if (affectedRows > 0) {
-                ResultSet rs = pstmt.getGeneratedKeys();
-                if (rs.next()) {
-                    return rs.getInt(1);
-                }
+            Question question = answer.getQuestion();
+            if (question != null && question.getId() != null) {
+                 Question managedQuestion = session.get(Question.class, question.getId());
+                 if (managedQuestion != null) {
+                    answer.setQuestion(managedQuestion); // Ensure answer is associated with the managed question
+                    managedQuestion.setStatus(Question.QuestionStatus.ANSWERED);
+                    session.merge(managedQuestion); 
+                 } else {
+                    System.err.println("Attempted to save answer for non-existent question ID: " + question.getId());
+                    if(transaction != null) transaction.rollback();
+                    return false;
+                 }
             }
-            
-            return -1;
-        } catch (SQLException e) {
+
+            session.persist(answer);
+            transaction.commit();
+            return true;
+        } catch (Exception e) {
+            if (transaction != null) {
+                transaction.rollback();
+            }
             e.printStackTrace();
-            return -1;
+            return false;
         }
     }
     
@@ -105,18 +86,16 @@ public class AnswerDAO {
      * Cập nhật câu trả lời
      */
     public boolean updateAnswer(Answer answer) {
-        String sql = "UPDATE answers SET content = ? WHERE id = ?";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
-            pstmt.setString(1, answer.getContent());
-            pstmt.setInt(2, answer.getId());
-            
-            int affectedRows = pstmt.executeUpdate();
-            
-            return affectedRows > 0;
-        } catch (SQLException e) {
+        Transaction transaction = null;
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            transaction = session.beginTransaction();
+            session.merge(answer);
+            transaction.commit();
+            return true;
+        } catch (Exception e) {
+            if (transaction != null) {
+                transaction.rollback();
+            }
             e.printStackTrace();
             return false;
         }
@@ -125,68 +104,49 @@ public class AnswerDAO {
     /**
      * Xóa câu trả lời
      */
-    public boolean deleteAnswer(int id) {
-        String sql = "DELETE FROM answers WHERE id = ?";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
-            pstmt.setInt(1, id);
-            
-            int affectedRows = pstmt.executeUpdate();
-            
-            return affectedRows > 0;
-        } catch (SQLException e) {
+    public boolean deleteAnswer(Long id) {
+        Transaction transaction = null;
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            transaction = session.beginTransaction();
+            Answer answer = session.get(Answer.class, id);
+            if (answer != null) {
+                session.remove(answer);
+                transaction.commit();
+                return true;
+            }
+            return false;
+        } catch (Exception e) {
+            if (transaction != null) {
+                transaction.rollback();
+            }
             e.printStackTrace();
             return false;
         }
     }
     
     /**
-     * Chuyển đổi từ ResultSet sang đối tượng Answer
+     * Đếm số câu trả lời của một người dùng (cố vấn)
      */
-    private Answer mapResultSetToAnswer(ResultSet rs) throws SQLException {
-        Answer answer = new Answer();
-        
-        answer.setId(rs.getInt("id"));
-        
-        // Lấy thông tin câu hỏi
-        int questionId = rs.getInt("question_id");
-        Question question = questionDAO.getQuestionById(questionId);
-        answer.setQuestion(question);
-        
-        // Lấy thông tin người dùng
-        int userId = rs.getInt("user_id");
-        CustomUser user = userDAO.getUserById(userId);
-        answer.setUser(user);
-        
-        answer.setContent(rs.getString("content"));
-        answer.setCreatedAt(rs.getTimestamp("created_at"));
-        answer.setUpdatedAt(rs.getTimestamp("updated_at"));
-        
-        return answer;
-    }
-    
-    /**
-     * Đếm số câu trả lời của một cố vấn
-     */
-    public int countAnswersByAdvisor(int advisorId) {
-        String sql = "SELECT COUNT(*) FROM answers WHERE user_id = ?";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setInt(1, advisorId);
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getInt(1);
-                }
-            }
-        } catch (SQLException e) {
+    public int countAnswersByUserId(Long userId) {
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            Query<Long> query = session.createQuery("SELECT COUNT(a) FROM Answer a WHERE a.user.id = :userId", Long.class);
+            query.setParameter("userId", userId);
+            Long count = query.uniqueResult();
+            return count != null ? count.intValue() : 0;
+        } catch (Exception e) {
             e.printStackTrace();
+            return 0;
         }
-        
-        return 0;
+    }
+
+    public List<Answer> findByUserId(Long userId) {
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            Query<Answer> query = session.createQuery("FROM Answer a WHERE a.user.id = :userId ORDER BY a.createdAt DESC", Answer.class);
+            query.setParameter("userId", userId);
+            return query.list();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
     }
 }

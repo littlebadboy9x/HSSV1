@@ -1,29 +1,45 @@
 package org.example.hssv1.model;
 
+import jakarta.persistence.*;
+import java.util.List;
+
+@Entity
+@Table(name = "majors")
 public class Major {
-    private int id;
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, unique = true, length = 100)
     private String name;
+
+    @Column(columnDefinition = "TEXT")
     private String description;
-    private boolean isActive;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "department_id", nullable = false)
     private Department department;
 
+    @OneToMany(mappedBy = "major", cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REFRESH}, fetch = FetchType.LAZY)
+    private List<Question> questions; // Questions related to this major
+
+    // Constructors
     public Major() {
     }
 
-    public Major(int id, String name, String description, boolean isActive, Department department) {
-        this.id = id;
+    public Major(String name, String description, Department department) {
         this.name = name;
         this.description = description;
-        this.isActive = isActive;
         this.department = department;
     }
 
     // Getters and Setters
-    public int getId() {
+    public Long getId() {
         return id;
     }
 
-    public void setId(int id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
@@ -43,20 +59,20 @@ public class Major {
         this.description = description;
     }
 
-    public boolean isActive() {
-        return isActive;
-    }
-
-    public void setActive(boolean active) {
-        isActive = active;
-    }
-
     public Department getDepartment() {
         return department;
     }
 
     public void setDepartment(Department department) {
         this.department = department;
+    }
+
+    public List<Question> getQuestions() {
+        return questions;
+    }
+
+    public void setQuestions(List<Question> questions) {
+        this.questions = questions;
     }
 
     @Override
