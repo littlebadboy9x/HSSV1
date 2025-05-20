@@ -1,0 +1,55 @@
+----- YÊU CẦU TRANG WEB TƯ VẤN SINH VIÊN -----
+
+I. CHỨC NĂNG NGƯỜI DÙNG
+1. Đăng ký tài khoản:
+   - Họ tên
+   - Email
+   - Mã số sinh viên (MSSV)
+   - Phân loại người dùng:
+     + Sinh viên
+     + Cựu sinh viên (yêu cầu thêm: niên khóa)
+     + Phụ huynh (yêu cầu thêm: số điện thoại)
+     + Học sinh phổ thông (yêu cầu thêm: lớp)
+
+2. Đăng nhập hệ thống
+
+3. Quản lý câu hỏi:
+   - Đặt câu hỏi mới
+   - Xem lịch sử câu hỏi đã đặt
+   - Tìm kiếm câu hỏi theo từ khóa
+   - Xem trạng thái câu hỏi (đã trả lời/chưa trả lời)
+   - Xem thông tin người trả lời và thời gian trả lời
+
+4. Thông tin câu hỏi:
+   - Ngày đăng câu hỏi
+   - Ngành học liên quan
+   - Nội dung câu hỏi
+   - Trạng thái câu hỏi
+   - Thông tin người trả lời
+   - Thời gian trả lời
+   - Có thể có nhiều câu trả lời cho một câu hỏi
+
+II. CHỨC NĂNG QUẢN TRỊ
+1. Phân quyền quản lý:
+   - Admin hệ thống
+   - Ban tư vấn (phân theo khoa/đơn vị)
+
+2. Quản lý danh mục:
+   - Ngành học
+   - Đơn vị/Khoa
+   - Loại câu hỏi
+
+3. Quản lý câu hỏi:
+   - Xem tất cả câu hỏi
+   - Trả lời câu hỏi
+   - Cập nhật trạng thái câu hỏi
+
+III. BÁO CÁO THỐNG KÊ
+1. Thống kê hiệu quả làm việc của các khoa
+2. Thống kê tổng số câu hỏi từ đầu đến hiện tại
+3. Thống kê số lượng câu hỏi từ đầu năm đến hiện tại
+4. Thống kê đề tài câu hỏi được sinh viên quan tâm nhiều nhất
+
+IV. GIAO DIỆN
+1. Hiển thị đoạn tóm tắt câu hỏi kèm trạng thái đã trả lời hay chưa
+2. Hiển thị thông tin người trả lời và thời gian trả lời

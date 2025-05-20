@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+
+{% block title %}Danh sách tư vấn viên - Tư Vấn Sinh Viên{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="mb-3"><i class="fas fa-users me-2"></i>Danh sách tư vấn viên</h1>
+            <p class="lead text-muted">Đội ngũ tư vấn viên luôn sẵn sàng hỗ trợ và giải đáp thắc mắc của bạn.</p>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-filter me-2"></i>Lọc theo khoa/đơn vị</h5>
+                    <form method="get" action="{% url 'advisor_list' %}">
+                        <div class="mb-3">
+                            <select name="department" class="form-select" onchange="this.form.submit()">
+                                <option value="">Tất cả khoa/đơn vị</option>
+                                {% for department in departments %}
+                                <option value="{{ department.id }}" {% if selected_department == department.id|stringformat:"i" %}selected{% endif %}>
+                                    {{ department.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        {% for advisor in advisors %}
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        {% if advisor.role == 'admin' %}
+                        <i class="fas fa-user-shield me-2"></i>
+                        {% else %}
+                        <i class="fas fa-user-tie me-2"></i>
+                        {% endif %}
+                        {{ advisor.user.get_full_name|default:advisor.user.username }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">
+                        <span class="badge bg-primary mb-2">{{ advisor.get_role_display }}</span>
+                        {% if advisor.department %}
+                        <span class="badge bg-info mb-2">{{ advisor.department.name }}</span>
+                        {% endif %}
+                    </p>
+                    
+                    <div class="mb-3">
+                        <strong><i class="fas fa-envelope me-2"></i>Email:</strong>
+                        <a href="mailto:{{ advisor.user.email }}">{{ advisor.user.email }}</a>
+                    </div>
+                    
+                    {% if advisor.department %}
+                    <div class="mb-3">
+                        <strong><i class="fas fa-building me-2"></i>Khoa/Đơn vị:</strong>
+                        <span>{{ advisor.department.name }}</span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong><i class="fas fa-graduation-cap me-2"></i>Ngành học:</strong>
+                        <ul class="list-unstyled ms-3">
+                            {% for major in advisor.department.major_set.all %}
+                            <li><i class="fas fa-angle-right me-1"></i>{{ major.name }}</li>
+                            {% empty %}
+                            <li class="text-muted">Chưa có ngành học nào</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer">
+                    <a href="{% url 'ask_question' %}" class="btn btn-primary w-100">
+                        <i class="fas fa-question-circle me-1"></i>Đặt câu hỏi
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>Chưa có tư vấn viên nào trong hệ thống.
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %} 

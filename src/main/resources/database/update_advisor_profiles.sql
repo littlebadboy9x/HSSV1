@@ -1,0 +1,2 @@
+ALTER TABLE advisor_profiles ADD COLUMN phone VARCHAR(20) DEFAULT NULL;
+ALTER TABLE advisor_profiles ADD COLUMN available BOOLEAN DEFAULT TRUE; 
