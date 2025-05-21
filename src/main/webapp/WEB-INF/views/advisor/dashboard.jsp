@@ -18,7 +18,7 @@
         <div class="row mb-4">
             <div class="col">
                 <h2>Dashboard Cố Vấn</h2>
-                <p class="text-muted">Xin chào, ${sessionScope.user.firstName} ${sessionScope.user.lastName}</p>
+                <p class="text-muted">Xin chào, ${sessionScope.user.fullName}</p>
             </div>
         </div>
         
@@ -62,7 +62,7 @@
                 <c:if test="${not empty unansweredQuestions}">
                     <div class="list-group">
                         <c:forEach var="question" items="${unansweredQuestions}">
-                            <a href="${pageContext.request.contextPath}/questions/${question.id}" 
+                            <a href="${pageContext.request.contextPath}/questions/detail?id=${question.id}" 
                                class="list-group-item list-group-item-action">
                                 <div class="d-flex w-100 justify-content-between">
                                     <h6 class="mb-1">${question.title}</h6>
@@ -72,7 +72,7 @@
                                 </div>
                                 <p class="mb-1 text-truncate">${question.content}</p>
                                 <small class="text-muted">
-                                    Bởi: ${question.user.firstName} ${question.user.lastName}
+                                    Bởi: ${question.user.fullName}
                                 </small>
                             </a>
                         </c:forEach>
@@ -93,7 +93,7 @@
                 <c:if test="${not empty answeredQuestions}">
                     <div class="list-group">
                         <c:forEach var="question" items="${answeredQuestions}">
-                            <a href="${pageContext.request.contextPath}/questions/${question.id}" 
+                            <a href="${pageContext.request.contextPath}/questions/detail?id=${question.id}" 
                                class="list-group-item list-group-item-action">
                                 <div class="d-flex w-100 justify-content-between">
                                     <h6 class="mb-1">${question.title}</h6>
@@ -103,7 +103,7 @@
                                 </div>
                                 <p class="mb-1 text-truncate">${question.content}</p>
                                 <small class="text-muted">
-                                    Bởi: ${question.user.firstName} ${question.user.lastName}
+                                    Bởi: ${question.user.fullName}
                                 </small>
                             </a>
                         </c:forEach>

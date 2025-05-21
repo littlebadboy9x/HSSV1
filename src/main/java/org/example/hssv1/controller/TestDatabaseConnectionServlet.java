@@ -5,11 +5,11 @@ import org.example.hssv1.util.HibernateUtil; // Added
 import org.hibernate.Session; // Added
 import org.hibernate.SessionFactory; //Added
 
-import jakarta.servlet.ServletException; // Changed
-import jakarta.servlet.annotation.WebServlet; // Changed
-import jakarta.servlet.http.HttpServlet; // Changed
-import jakarta.servlet.http.HttpServletRequest; // Changed
-import jakarta.servlet.http.HttpServletResponse; // Changed
+import javax.servlet.ServletException; // Changed
+import javax.servlet.annotation.WebServlet; // Changed
+import javax.servlet.http.HttpServlet; // Changed
+import javax.servlet.http.HttpServletRequest; // Changed
+import javax.servlet.http.HttpServletResponse; // Changed
 import java.io.IOException;
 import java.io.PrintWriter;
 // import java.sql.Connection; // Removed

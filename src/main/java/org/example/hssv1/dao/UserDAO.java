@@ -187,4 +187,29 @@ public class UserDAO {
     public boolean checkPassword(String plainPassword, String hashedPassword) {
         return BCrypt.checkpw(plainPassword, hashedPassword);
     }
+    
+    /**
+     * Cập nhật thời gian đăng nhập
+     */
+    public boolean updateLastLogin(Long userId) {
+        Transaction transaction = null;
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+            transaction = session.beginTransaction();
+            CustomUser user = session.get(CustomUser.class, userId);
+            if (user != null) {
+                java.util.Date now = new java.util.Date();
+                user.setLastLogin(now);
+                session.merge(user);
+                transaction.commit();
+                return true;
+            }
+            return false;
+        } catch (Exception e) {
+            if (transaction != null) {
+                transaction.rollback();
+            }
+            e.printStackTrace();
+            return false;
+        }
+    }
 }

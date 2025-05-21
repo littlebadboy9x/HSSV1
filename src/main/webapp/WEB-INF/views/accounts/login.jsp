@@ -10,9 +10,9 @@
     <link rel="stylesheet" href="${pageContext.request.contextPath}/resources/css/styles.css">
 </head>
 <body>
-    <jsp:include page="../includes/header.jsp"/>
+    <jsp:include page="../includes/header.jsp" />
     
-    <div class="container mt-5">
+    <div class="container mt-4">
         <div class="row justify-content-center">
             <div class="col-md-6">
                 <div class="card">
@@ -20,22 +20,27 @@
                         <h4 class="mb-0">Đăng nhập</h4>
                     </div>
                     <div class="card-body">
-                        <c:if test="${not empty error}">
+                        <c:if test="${not empty errorMessage}">
                             <div class="alert alert-danger" role="alert">
-                                ${error}
+                                ${errorMessage}
                             </div>
                         </c:if>
                         
-                        <c:if test="${not empty message}">
+                        <c:if test="${not empty successMessage}">
                             <div class="alert alert-success" role="alert">
-                                ${message}
+                                ${successMessage}
                             </div>
                         </c:if>
                         
-                        <form action="${pageContext.request.contextPath}/login" method="post">
+                        <form method="post" action="${pageContext.request.contextPath}/login">
+                            <c:if test="${not empty redirectUrl}">
+                                <input type="hidden" name="redirectUrl" value="${redirectUrl}">
+                            </c:if>
+                            
                             <div class="form-group">
                                 <label for="username">Tên đăng nhập</label>
-                                <input type="text" class="form-control" id="username" name="username" required>
+                                <input type="text" class="form-control" id="username" name="username" 
+                                    value="${username}" required autofocus>
                             </div>
                             
                             <div class="form-group">
@@ -48,19 +53,21 @@
                                 <label class="form-check-label" for="rememberMe">Ghi nhớ đăng nhập</label>
                             </div>
                             
-                            <button type="submit" class="btn btn-primary btn-block">Đăng nhập</button>
+                            <div class="form-group text-center mt-4">
+                                <button type="submit" class="btn btn-primary px-4">Đăng nhập</button>
+                            </div>
+                            
+                            <div class="text-center mt-3">
+                                <p>Chưa có tài khoản? <a href="${pageContext.request.contextPath}/register">Đăng ký ngay</a></p>
+                            </div>
                         </form>
-                        
-                        <div class="mt-3 text-center">
-                            <p>Chưa có tài khoản? <a href="${pageContext.request.contextPath}/register">Đăng ký ngay</a></p>
-                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
     
-    <jsp:include page="../includes/footer.jsp"/>
+    <jsp:include page="../includes/footer.jsp" />
     
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>

@@ -6,273 +6,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đặt câu hỏi mới - Hệ thống tư vấn sinh viên</title>
-    <style>
-        /* Reset CSS */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background-color: #f5f5f5;
-            padding: 20px;
-        }
-        
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
-        
-        h2 {
-            margin-bottom: 20px;
-            color: #333;
-        }
-        
-        .btn {
-            display: inline-block;
-            padding: 8px 16px;
-            background-color: #4a89dc;
-            color: white;
-            text-decoration: none;
-            border-radius: 4px;
-            border: none;
-            cursor: pointer;
-            font-size: 14px;
-            transition: background-color 0.3s;
-        }
-        
-        .btn:hover {
-            background-color: #3b6fc1;
-        }
-        
-        .btn-secondary {
-            background-color: #6c757d;
-        }
-        
-        .btn-secondary:hover {
-            background-color: #5a6268;
-        }
-        
-        .form-group {
-            margin-bottom: 1rem;
-        }
-        
-        label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-        }
-        
-        .form-control {
-            display: block;
-            width: 100%;
-            padding: 0.375rem 0.75rem;
-            font-size: 1rem;
-            line-height: 1.5;
-            color: #495057;
-            background-color: #fff;
-            background-clip: padding-box;
-            border: 1px solid #ced4da;
-            border-radius: 0.25rem;
-            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-        }
-        
-        .form-control:focus {
-            color: #495057;
-            background-color: #fff;
-            border-color: #80bdff;
-            outline: 0;
-            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-        }
-        
-        textarea.form-control {
-            height: auto;
-            min-height: 200px;
-        }
-        
-        select.form-control {
-            height: calc(2.25rem + 2px);
-        }
-        
-        .text-danger {
-            color: #dc3545;
-        }
-        
-        .mt-1 {
-            margin-top: 0.25rem;
-        }
-        
-        .mb-3 {
-            margin-bottom: 1rem;
-        }
-        
-        .alert {
-            position: relative;
-            padding: 0.75rem 1.25rem;
-            margin-bottom: 1rem;
-            border: 1px solid transparent;
-            border-radius: 0.25rem;
-        }
-        
-        .alert-danger {
-            color: #721c24;
-            background-color: #f8d7da;
-            border-color: #f5c6cb;
-        }
-        
-        .spinner {
-            display: inline-block;
-            width: 1rem;
-            height: 1rem;
-            border: 0.2em solid currentColor;
-            border-right-color: transparent;
-            border-radius: 50%;
-            animation: spinner-border .75s linear infinite;
-            vertical-align: text-bottom;
-        }
-        
-        @keyframes spinner-border {
-            to { transform: rotate(360deg); }
-        }
-    </style>
+    <title>Đặt câu hỏi - Hệ thống Tư vấn Sinh viên</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/resources/css/styles.css">
+    <!-- CKEditor CDN -->
+    <script src="https://cdn.ckeditor.com/4.16.0/standard/ckeditor.js"></script>
 </head>
 <body>
-    <div class="container">
-        <h2>Đặt câu hỏi mới</h2>
-        
-        <c:if test="${not empty errorMessage}">
-            <div class="alert alert-danger" role="alert">
-                ${errorMessage}
-            </div>
-        </c:if>
-        
-        <form action="${pageContext.request.contextPath}/questions/ask" method="post" id="question-form" onsubmit="return validateForm()">
-            <div class="form-group mb-3">
-                <label for="title">Tiêu đề câu hỏi <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="title" name="title" 
-                       placeholder="Nhập tiêu đề câu hỏi" maxlength="200" value="${param.title}">
-                <div id="title-feedback" class="text-danger mt-1" style="display: none;">
-                    Vui lòng nhập tiêu đề câu hỏi
-                </div>
-            </div>
-            
-            <div class="form-group mb-3">
-                <label for="ask_content_main">Nội dung chi tiết <span class="text-danger">*</span></label>
-                <textarea class="form-control" id="ask_content_main" name="content" rows="10" 
-                          placeholder="Nội dung chi tiết câu hỏi (không để trống)">${param.content}</textarea>
-                <div id="content-feedback" class="text-danger mt-1" style="display: none;">
-                    Vui lòng nhập nội dung chi tiết câu hỏi
-                </div>
-            </div>
-            
-            <div class="form-group mb-3">
-                <label for="category">Loại câu hỏi <span class="text-danger">*</span></label>
-                <select class="form-control" id="category" name="categoryId">
-                    <option value="">-- Chọn loại câu hỏi --</option>
-                    <c:forEach items="${categories}" var="category">
-                        <option value="${category.id}" ${param.categoryId == category.id ? 'selected' : ''}>${category.name}</option>
-                    </c:forEach>
-                </select>
-                <div id="category-feedback" class="text-danger mt-1" style="display: none;">
-                    Vui lòng chọn loại câu hỏi
-                </div>
-            </div>
-            
-            <div class="form-group mb-3">
-                <label for="major">Ngành học liên quan</label>
-                <select class="form-control" id="major" name="majorId">
-                    <option value="">-- Chọn ngành học (không bắt buộc) --</option>
-                    <c:forEach items="${majors}" var="major">
-                        <option value="${major.id}" ${param.majorId == major.id ? 'selected' : ''}>${major.name}</option>
-                    </c:forEach>
-                </select>
-            </div>
-            
-            <button type="submit" class="btn" id="submit-button">
-                Gửi câu hỏi
-            </button>
-            <a href="${pageContext.request.contextPath}/questions" class="btn btn-secondary">Hủy</a>
-        </form>
-    </div>
-
-    <script>
-    function validateForm() {
-        var title = document.getElementById('title').value.trim();
-        var content = document.getElementById('ask_content_main').value.trim();
-        var category = document.getElementById('category').value;
-        var isValid = true;
-        
-        // Validate title
-        if (title === '') {
-            document.getElementById('title-feedback').style.display = 'block';
-            document.getElementById('title').focus();
-            isValid = false;
-        } else {
-            document.getElementById('title-feedback').style.display = 'none';
-        }
-        
-        // Validate content
-        if (content === '') {
-            document.getElementById('content-feedback').style.display = 'block';
-            if (isValid) {
-                document.getElementById('ask_content_main').focus();
-                isValid = false;
-            }
-        } else {
-            document.getElementById('content-feedback').style.display = 'none';
-        }
-        
-        // Validate category
-        if (category === '') {
-            document.getElementById('category-feedback').style.display = 'block';
-            if (isValid) {
-                document.getElementById('category').focus();
-                isValid = false;
-            }
-        } else {
-            document.getElementById('category-feedback').style.display = 'none';
-        }
-        
-        if (!isValid) {
-            return false;
-        }
-        
-        // Disable button to prevent double submission
-        document.getElementById('submit-button').disabled = true;
-        document.getElementById('submit-button').innerHTML = '<span class="spinner"></span> Đang gửi...';
-        
-        return true;
-    }
+    <jsp:include page="../includes/header.jsp" />
     
-    // Add input event listeners to hide feedback when user types
-    document.addEventListener('DOMContentLoaded', function() {
-        document.getElementById('title').addEventListener('input', function() {
-            if (this.value.trim() !== '') {
-                document.getElementById('title-feedback').style.display = 'none';
-            }
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-8 offset-md-2">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0">Đặt câu hỏi</h4>
+                    </div>
+                    <div class="card-body">
+                        <c:if test="${not empty errorMessage}">
+                            <div class="alert alert-danger" role="alert">
+                                ${errorMessage}
+                            </div>
+                        </c:if>
+                        
+                        <form method="post" action="${pageContext.request.contextPath}/questions/ask">
+                            <div class="form-group">
+                                <label for="title">Tiêu đề câu hỏi <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="title" name="title" 
+                                    value="${title}" required 
+                                    placeholder="Nhập tiêu đề ngắn gọn về câu hỏi của bạn"
+                                    maxlength="255">
+                                <small class="form-text text-muted">
+                                    Tiêu đề nên ngắn gọn và mô tả rõ vấn đề bạn đang gặp phải.
+                                </small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="categoryId">Danh mục <span class="text-danger">*</span></label>
+                                <select class="form-control" id="categoryId" name="categoryId" required>
+                                    <option value="">-- Chọn danh mục --</option>
+                                    <c:forEach var="category" items="${categories}">
+                                        <option value="${category.id}" 
+                                            ${categoryId == category.id ? 'selected' : ''}>
+                                            ${category.name}
+                                        </option>
+                                    </c:forEach>
+                                </select>
+                                <small class="form-text text-muted">
+                                    Chọn danh mục phù hợp với câu hỏi của bạn.
+                                </small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="majorId">Ngành học liên quan</label>
+                                <select class="form-control" id="majorId" name="majorId">
+                                    <option value="">-- Chọn ngành học (nếu có) --</option>
+                                    <c:forEach var="major" items="${majors}">
+                                        <option value="${major.id}" 
+                                            ${majorId == major.id ? 'selected' : ''}>
+                                            ${major.name}
+                                        </option>
+                                    </c:forEach>
+                                </select>
+                                <small class="form-text text-muted">
+                                    Nếu câu hỏi liên quan đến một ngành học cụ thể, hãy chọn ngành đó.
+                                </small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="content">Nội dung câu hỏi <span class="text-danger">*</span></label>
+                                <textarea class="form-control" id="content" name="content" rows="8" required>${content}</textarea>
+                                <small class="form-text text-muted">
+                                    Mô tả chi tiết vấn đề bạn đang gặp phải. Càng chi tiết, cơ hội nhận được câu trả lời hữu ích càng cao.
+                                </small>
+                            </div>
+                            
+                            <div class="form-group form-check">
+                                <input type="checkbox" class="form-check-input" id="isAnonymous" name="isAnonymous" 
+                                    ${isAnonymous ? 'checked' : ''}>
+                                <label class="form-check-label" for="isAnonymous">Đăng câu hỏi ẩn danh</label>
+                                <small class="form-text text-muted d-block">
+                                    Nếu bạn chọn ẩn danh, người khác sẽ không thấy thông tin của bạn.
+                                </small>
+                            </div>
+                            
+                            <div class="form-group text-center mt-4">
+                                <button type="submit" class="btn btn-primary px-5">Đăng câu hỏi</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <jsp:include page="../includes/footer.jsp" />
+    
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    
+    <script>
+        // Khởi tạo CKEditor cho textarea nội dung
+        CKEDITOR.replace('content', {
+            language: 'vi',
+            height: 300,
+            filebrowserUploadUrl: '${pageContext.request.contextPath}/upload',
+            removeButtons: 'Save,NewPage,Preview,Print,Templates,PasteFromWord'
         });
-        
-        document.getElementById('ask_content_main').addEventListener('input', function() {
-            if (this.value.trim() !== '') {
-                document.getElementById('content-feedback').style.display = 'none';
-            }
-        });
-        
-        document.getElementById('category').addEventListener('change', function() {
-            if (this.value !== '') {
-                document.getElementById('category-feedback').style.display = 'none';
-            }
-        });
-    });
     </script>
 </body>
 </html> 

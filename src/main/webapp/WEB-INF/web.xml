@@ -6,6 +6,34 @@
 
     <display-name>Hệ thống Tư vấn Sinh viên</display-name>
 
+    <!-- Explicit servlet mappings -->
+    <servlet>
+        <servlet-name>LoginServlet</servlet-name>
+        <servlet-class>org.example.hssv1.controller.accounts.LoginController</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>LoginServlet</servlet-name>
+        <url-pattern>/login</url-pattern>
+    </servlet-mapping>
+    
+    <servlet>
+        <servlet-name>RegisterServlet</servlet-name>
+        <servlet-class>org.example.hssv1.controller.accounts.RegisterController</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>RegisterServlet</servlet-name>
+        <url-pattern>/register</url-pattern>
+    </servlet-mapping>
+    
+    <servlet>
+        <servlet-name>LogoutServlet</servlet-name>
+        <servlet-class>org.example.hssv1.controller.accounts.LogoutController</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>LogoutServlet</servlet-name>
+        <url-pattern>/logout</url-pattern>
+    </servlet-mapping>
+
     <!-- Filter cho phân quyền -->
     <filter>
         <filter-name>AdminAuthFilter</filter-name>
@@ -13,8 +41,8 @@
     </filter>
     <filter-mapping>
         <filter-name>AdminAuthFilter</filter-name>
-        <url-pattern>/admin-panel/*</url-pattern>
-        <url-pattern>/stats/*</url-pattern>
+        <url-pattern>/admin/*</url-pattern>
+        <url-pattern>/statistics/*</url-pattern>
     </filter-mapping>
 
     <!-- Session timeout (phút) -->

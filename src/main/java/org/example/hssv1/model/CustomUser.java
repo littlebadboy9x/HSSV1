@@ -1,6 +1,6 @@
 package org.example.hssv1.model;
 
-import jakarta.persistence.*;
+import javax.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -59,6 +59,10 @@ public class CustomUser {
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "updated_at", nullable = false)
     private Date updatedAt;
+
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "last_login")
+    private Date lastLogin;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Question> questions;
@@ -185,6 +189,14 @@ public class CustomUser {
 
     public void setUpdatedAt(Date updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Date getLastLogin() {
+        return lastLogin;
+    }
+
+    public void setLastLogin(Date lastLogin) {
+        this.lastLogin = lastLogin;
     }
 
     public List<Question> getQuestions() {

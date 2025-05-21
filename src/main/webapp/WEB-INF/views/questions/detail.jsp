@@ -9,8 +9,8 @@
     <title>${question.title} - Hệ thống Tư vấn Sinh viên</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/resources/css/styles.css">
-    <!-- Thêm CKEditor -->
-    <script src="https://cdn.ckeditor.com/ckeditor5/27.1.0/classic/ckeditor.js"></script>
+    <!-- Thêm CKEditor 4 thay vì CKEditor 5 -->
+    <script src="https://cdn.ckeditor.com/4.16.0/standard/ckeditor.js"></script>
     <style>
         .question-content img, .answer-content img {
             max-width: 100%;
@@ -38,18 +38,26 @@
             </ol>
         </nav>
         
-        <c:if test="${not empty errorMessage}">
+        <c:if test="${not empty sessionScope.errorMessage}">
             <div class="alert alert-danger" role="alert">
-                ${errorMessage}
+                ${sessionScope.errorMessage}
             </div>
+            <c:remove var="errorMessage" scope="session"/>
+        </c:if>
+        
+        <c:if test="${not empty sessionScope.successMessage}">
+            <div class="alert alert-success" role="alert">
+                ${sessionScope.successMessage}
+            </div>
+            <c:remove var="successMessage" scope="session"/>
         </c:if>
         
         <!-- Chi tiết câu hỏi -->
         <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h2 class="mb-0">${question.title}</h2>
-                <span class="badge ${question.status == 'answered' ? 'badge-answered' : 'badge-pending'}">
-                    ${question.status == 'answered' ? 'Đã trả lời' : 'Đang chờ'}
+                <span class="badge ${question.status == 'ANSWERED' ? 'badge-answered' : 'badge-pending'}">
+                    ${question.status == 'ANSWERED' ? 'Đã trả lời' : 'Đang chờ'}
                 </span>
             </div>
             <div class="card-body">
@@ -60,7 +68,7 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <small class="text-muted">
-                            Đăng bởi: ${question.user.fullName} |
+                            Đăng bởi: ${question.anonymous ? 'Ẩn danh' : question.user.fullName} |
                             <fmt:formatDate value="${question.createdAt}" pattern="dd/MM/yyyy HH:mm"/>
                         </small>
                     </div>
@@ -73,6 +81,15 @@
                         </c:if>
                     </div>
                 </div>
+                
+                <!-- Hiển thị nút chỉnh sửa nếu người dùng là chủ sở hữu và câu hỏi chưa được trả lời -->
+                <c:if test="${isOwner && question.status != 'ANSWERED' && question.status != 'CLOSED'}">
+                    <div class="mt-3">
+                        <a href="${pageContext.request.contextPath}/questions/edit?id=${question.id}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-edit"></i> Chỉnh sửa câu hỏi
+                        </a>
+                    </div>
+                </c:if>
             </div>
         </div>
         
@@ -93,6 +110,9 @@
                                 <strong>${answer.user.fullName}</strong>
                                 <c:if test="${isAdvisor && answer.user.id == user.id}">
                                     <span class="badge badge-primary">Bạn</span>
+                                </c:if>
+                                <c:if test="${answer.user.advisorProfile != null}">
+                                    <span class="badge badge-primary ml-1">Cố vấn</span>
                                 </c:if>
                             </div>
                             <small class="text-muted">
@@ -116,7 +136,7 @@
                     <h4 class="mb-0">Trả lời câu hỏi</h4>
                 </div>
                 <div class="card-body">
-                    <form method="post" action="${pageContext.request.contextPath}/questions/detail">
+                    <form method="post" action="${pageContext.request.contextPath}/questions/view">
                         <input type="hidden" name="questionId" value="${question.id}">
                         
                         <div class="form-group">
@@ -144,12 +164,20 @@
     
     <c:if test="${isAdvisor}">
         <script>
-            // Khởi tạo CKEditor cho textarea
-            ClassicEditor
-                .create(document.querySelector('#content'))
-                .catch(error => {
-                    console.error(error);
-                });
+            // Khởi tạo CKEditor 4 cho textarea
+            CKEDITOR.replace('content', {
+                language: 'vi',
+                height: 300,
+                removeButtons: 'Save,NewPage,Preview,Print,Templates,PasteFromWord'
+            });
+            
+            // Đảm bảo dữ liệu CKEditor được gửi đi khi submit form
+            document.querySelector('form').addEventListener('submit', function(e) {
+                // Cập nhật nội dung từ CKEditor vào textarea trước khi submit
+                for (var instanceName in CKEDITOR.instances) {
+                    CKEDITOR.instances[instanceName].updateElement();
+                }
+            });
         </script>
     </c:if>
 </body>

@@ -1,6 +1,6 @@
 package org.example.hssv1.model;
 
-import jakarta.persistence.*;
+import javax.persistence.*;
 import java.util.Date;
 import java.util.List;
 
@@ -45,6 +45,9 @@ public class Question {
     
     @Column(name = "view_count", nullable = false, columnDefinition = "INT DEFAULT 0")
     private int viewCount = 0;
+
+    @Column(name = "is_anonymous", nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    private boolean isAnonymous = false;
 
     @OneToMany(mappedBy = "question", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Answer> answers;
@@ -143,6 +146,14 @@ public class Question {
 
     public void setViewCount(int viewCount) {
         this.viewCount = viewCount;
+    }
+
+    public boolean isAnonymous() {
+        return isAnonymous;
+    }
+
+    public void setAnonymous(boolean isAnonymous) {
+        this.isAnonymous = isAnonymous;
     }
 
     public List<Answer> getAnswers() {

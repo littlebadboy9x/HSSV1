@@ -6,6 +6,7 @@ import org.example.hssv1.util.HibernateUtil;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.hibernate.query.Query;
+import org.hibernate.Hibernate;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,7 +21,17 @@ public class QuestionDAO {
     
     public Question findById(Long id) {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
-            return session.get(Question.class, id);
+            Question question = session.get(Question.class, id);
+            
+            // Khởi tạo eager loading cho các thuộc tính lazy
+            if (question != null) {
+                Hibernate.initialize(question.getUser());
+                Hibernate.initialize(question.getCategory());
+                Hibernate.initialize(question.getMajor());
+                Hibernate.initialize(question.getAnswers());
+            }
+            
+            return question;
         } catch (Exception e) {
             e.printStackTrace(); // Consider proper logging
             return null;
@@ -61,7 +72,17 @@ public class QuestionDAO {
 
     public List<Question> getAllQuestions() {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
-            return session.createQuery("FROM Question q ORDER BY q.createdAt DESC", Question.class).list();
+            List<Question> questions = session.createQuery("FROM Question q ORDER BY q.createdAt DESC", Question.class).list();
+            
+            // Khởi tạo eager loading cho các thuộc tính lazy
+            for (Question question : questions) {
+                Hibernate.initialize(question.getUser());
+                Hibernate.initialize(question.getCategory());
+                Hibernate.initialize(question.getMajor());
+                Hibernate.initialize(question.getAnswers());
+            }
+            
+            return questions;
         } catch (Exception e) {
             e.printStackTrace();
             return new ArrayList<>();
@@ -70,9 +91,19 @@ public class QuestionDAO {
 
     public List<Question> getRecentQuestions(int limit) {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
-            return session.createQuery("FROM Question q ORDER BY q.createdAt DESC", Question.class)
+            List<Question> questions = session.createQuery("FROM Question q ORDER BY q.createdAt DESC", Question.class)
                           .setMaxResults(limit)
                           .list();
+                          
+            // Khởi tạo eager loading cho các thuộc tính lazy
+            for (Question question : questions) {
+                Hibernate.initialize(question.getUser());
+                Hibernate.initialize(question.getCategory());
+                Hibernate.initialize(question.getMajor());
+                Hibernate.initialize(question.getAnswers());
+            }
+            
+            return questions;
         } catch (Exception e) {
             e.printStackTrace();
             return new ArrayList<>();
@@ -85,11 +116,21 @@ public class QuestionDAO {
             statuses.add(Question.QuestionStatus.ANSWERED);
             statuses.add(Question.QuestionStatus.CLOSED);
 
-            return session.createQuery(
+            List<Question> questions = session.createQuery(
                             "FROM Question q WHERE q.status IN (:statuses) ORDER BY q.updatedAt DESC", Question.class)
                     .setParameterList("statuses", statuses)
                     .setMaxResults(limit)
                     .list();
+                    
+            // Khởi tạo eager loading cho các thuộc tính lazy
+            for (Question question : questions) {
+                Hibernate.initialize(question.getUser());
+                Hibernate.initialize(question.getCategory());
+                Hibernate.initialize(question.getMajor());
+                Hibernate.initialize(question.getAnswers());
+            }
+            
+            return questions;
         } catch (Exception e) {
             e.printStackTrace(); // Consider proper logging
             return new ArrayList<>();
@@ -98,9 +139,19 @@ public class QuestionDAO {
 
     public List<Question> getPopularQuestions(int limit) {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
-            return session.createQuery("FROM Question q ORDER BY q.viewCount DESC, q.createdAt DESC", Question.class)
+            List<Question> questions = session.createQuery("FROM Question q ORDER BY q.viewCount DESC, q.createdAt DESC", Question.class)
                           .setMaxResults(limit)
                           .list();
+                          
+            // Khởi tạo eager loading cho các thuộc tính lazy
+            for (Question question : questions) {
+                Hibernate.initialize(question.getUser());
+                Hibernate.initialize(question.getCategory());
+                Hibernate.initialize(question.getMajor());
+                Hibernate.initialize(question.getAnswers());
+            }
+            
+            return questions;
         } catch (Exception e) {
             e.printStackTrace();
             return new ArrayList<>();
@@ -111,7 +162,17 @@ public class QuestionDAO {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             Query<Question> query = session.createQuery("FROM Question q WHERE lower(q.title) LIKE lower(:keyword) OR lower(q.content) LIKE lower(:keyword) ORDER BY q.createdAt DESC", Question.class);
             query.setParameter("keyword", "%" + keyword.toLowerCase() + "%");
-            return query.list();
+            List<Question> questions = query.list();
+            
+            // Khởi tạo eager loading cho các thuộc tính lazy
+            for (Question question : questions) {
+                Hibernate.initialize(question.getUser());
+                Hibernate.initialize(question.getCategory());
+                Hibernate.initialize(question.getMajor());
+                Hibernate.initialize(question.getAnswers());
+            }
+            
+            return questions;
         } catch (Exception e) {
             e.printStackTrace();
             return new ArrayList<>();
@@ -122,7 +183,17 @@ public class QuestionDAO {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             Query<Question> query = session.createQuery("FROM Question q WHERE q.user = :user ORDER BY q.createdAt DESC", Question.class);
             query.setParameter("user", user);
-            return query.list();
+            List<Question> questions = query.list();
+            
+            // Khởi tạo eager loading cho các thuộc tính lazy
+            for (Question question : questions) {
+                Hibernate.initialize(question.getUser());
+                Hibernate.initialize(question.getCategory());
+                Hibernate.initialize(question.getMajor());
+                Hibernate.initialize(question.getAnswers());
+            }
+            
+            return questions;
         } catch (Exception e) {
             e.printStackTrace();
             return new ArrayList<>();
@@ -133,7 +204,17 @@ public class QuestionDAO {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             Query<Question> query = session.createQuery("FROM Question q WHERE q.user.id = :userId ORDER BY q.createdAt DESC", Question.class);
             query.setParameter("userId", userId);
-            return query.list();
+            List<Question> questions = query.list();
+            
+            // Khởi tạo eager loading cho các thuộc tính lazy
+            for (Question question : questions) {
+                Hibernate.initialize(question.getUser());
+                Hibernate.initialize(question.getCategory());
+                Hibernate.initialize(question.getMajor());
+                Hibernate.initialize(question.getAnswers());
+            }
+            
+            return questions;
         } catch (Exception e) {
             e.printStackTrace();
             return new ArrayList<>();
@@ -185,7 +266,17 @@ public class QuestionDAO {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             Query<Question> query = session.createQuery("FROM Question q WHERE q.category.id = :categoryId ORDER BY q.createdAt DESC", Question.class);
             query.setParameter("categoryId", categoryId);
-            return query.list();
+            List<Question> questions = query.list();
+            
+            // Khởi tạo eager loading cho các thuộc tính lazy
+            for (Question question : questions) {
+                Hibernate.initialize(question.getUser());
+                Hibernate.initialize(question.getCategory());
+                Hibernate.initialize(question.getMajor());
+                Hibernate.initialize(question.getAnswers());
+            }
+            
+            return questions;
         } catch (Exception e) {
             e.printStackTrace();
             return new ArrayList<>();
@@ -196,7 +287,17 @@ public class QuestionDAO {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             Query<Question> query = session.createQuery("FROM Question q WHERE q.major.id = :majorId ORDER BY q.createdAt DESC", Question.class);
             query.setParameter("majorId", majorId);
-            return query.list();
+            List<Question> questions = query.list();
+            
+            // Khởi tạo eager loading cho các thuộc tính lazy
+            for (Question question : questions) {
+                Hibernate.initialize(question.getUser());
+                Hibernate.initialize(question.getCategory());
+                Hibernate.initialize(question.getMajor());
+                Hibernate.initialize(question.getAnswers());
+            }
+            
+            return questions;
         } catch (Exception e) {
             e.printStackTrace();
             return new ArrayList<>();
@@ -207,7 +308,17 @@ public class QuestionDAO {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             Query<Question> query = session.createQuery("FROM Question q WHERE q.status = :status ORDER BY q.createdAt DESC", Question.class);
             query.setParameter("status", status);
-            return query.list();
+            List<Question> questions = query.list();
+            
+            // Khởi tạo eager loading cho các thuộc tính lazy
+            for (Question question : questions) {
+                Hibernate.initialize(question.getUser());
+                Hibernate.initialize(question.getCategory());
+                Hibernate.initialize(question.getMajor());
+                Hibernate.initialize(question.getAnswers());
+            }
+            
+            return questions;
         } catch (Exception e) {
             e.printStackTrace();
             return new ArrayList<>();
@@ -218,7 +329,17 @@ public class QuestionDAO {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             Query<Question> query = session.createQuery("FROM Question q WHERE q.major.department.id = :departmentId ORDER BY q.createdAt DESC", Question.class);
             query.setParameter("departmentId", departmentId);
-            return query.list();
+            List<Question> questions = query.list();
+            
+            // Khởi tạo eager loading cho các thuộc tính lazy
+            for (Question question : questions) {
+                Hibernate.initialize(question.getUser());
+                Hibernate.initialize(question.getCategory());
+                Hibernate.initialize(question.getMajor());
+                Hibernate.initialize(question.getAnswers());
+            }
+            
+            return questions;
         } catch (Exception e) {
             e.printStackTrace();
             return new ArrayList<>();
@@ -233,7 +354,17 @@ public class QuestionDAO {
             );
             query.setParameter("departmentId", departmentId);
             query.setParameter("status", Question.QuestionStatus.PENDING);
-            return query.list();
+            List<Question> questions = query.list();
+            
+            // Khởi tạo eager loading cho các thuộc tính lazy
+            for (Question question : questions) {
+                Hibernate.initialize(question.getUser());
+                Hibernate.initialize(question.getCategory());
+                Hibernate.initialize(question.getMajor());
+                Hibernate.initialize(question.getAnswers());
+            }
+            
+            return questions;
         } catch (Exception e) {
             e.printStackTrace();
             return new ArrayList<>();
@@ -253,7 +384,18 @@ public class QuestionDAO {
             statuses.add(Question.QuestionStatus.ANSWERED);
             statuses.add(Question.QuestionStatus.CLOSED);
             query.setParameterList("statuses", statuses);
-            return query.list();
+            
+            List<Question> questions = query.list();
+            
+            // Khởi tạo eager loading cho các thuộc tính lazy
+            for (Question question : questions) {
+                Hibernate.initialize(question.getUser());
+                Hibernate.initialize(question.getCategory());
+                Hibernate.initialize(question.getMajor());
+                Hibernate.initialize(question.getAnswers());
+            }
+            
+            return questions;
         } catch (Exception e) {
             e.printStackTrace();
             return new ArrayList<>();

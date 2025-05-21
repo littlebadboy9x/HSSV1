@@ -60,10 +60,10 @@
                             <label for="status">Trạng thái</label>
                             <select name="status" id="status" class="form-control">
                                 <option value="">Tất cả</option>
-                                <option value="pending" ${selectedStatus == 'pending' ? 'selected' : ''}>
+                                <option value="PENDING" ${selectedStatus == 'PENDING' ? 'selected' : ''}>
                                     Đang chờ
                                 </option>
-                                <option value="answered" ${selectedStatus == 'answered' ? 'selected' : ''}>
+                                <option value="ANSWERED" ${selectedStatus == 'ANSWERED' ? 'selected' : ''}>
                                     Đã trả lời
                                 </option>
                             </select>
@@ -95,7 +95,7 @@
                 </c:when>
                 <c:otherwise>
                     <c:forEach items="${questions}" var="question">
-                        <a href="${pageContext.request.contextPath}/questions/detail?id=${question.id}" 
+                        <a href="${pageContext.request.contextPath}/questions/view?id=${question.id}" 
                            class="list-group-item list-group-item-action">
                             <div class="d-flex w-100 justify-content-between">
                                 <h5 class="mb-1">${question.title}</h5>
@@ -116,8 +116,8 @@
                                     ${question.viewCount} lượt xem |
                                     ${question.answers.size()} câu trả lời
                                 </small>
-                                <span class="badge ${question.status == 'answered' ? 'badge-success' : 'badge-warning'}">
-                                    ${question.status == 'answered' ? 'Đã trả lời' : 'Đang chờ'}
+                                <span class="badge ${question.status == 'ANSWERED' ? 'badge-success' : 'badge-warning'}">
+                                    ${question.status == 'ANSWERED' ? 'Đã trả lời' : 'Đang chờ'}
                                 </span>
                             </div>
                         </a>

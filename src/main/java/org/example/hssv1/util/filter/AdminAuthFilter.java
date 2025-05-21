@@ -15,7 +15,6 @@ import javax.servlet.annotation.WebFilter;
 /**
  * Filter bảo vệ các tài nguyên admin
  */
-@WebFilter("/admin/*")
 public class AdminAuthFilter implements Filter {
     
     public AdminAuthFilter() {

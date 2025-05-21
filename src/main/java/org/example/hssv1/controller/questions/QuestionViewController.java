@@ -18,10 +18,10 @@ import java.io.IOException;
 import java.util.List;
 
 /**
- * Controller xử lý hiển thị chi tiết câu hỏi và các câu trả lời
+ * Controller xử lý hiển thị chi tiết câu hỏi và các câu trả lời (URL pattern: /questions/view)
  */
-@WebServlet("/questions/detail")
-public class QuestionDetailController extends HttpServlet {
+@WebServlet("/questions/view")
+public class QuestionViewController extends HttpServlet {
     private static final long serialVersionUID = 1L;
     private QuestionDAO questionDAO;
     private AnswerDAO answerDAO;
@@ -41,7 +41,7 @@ public class QuestionDetailController extends HttpServlet {
         String questionIdStr = request.getParameter("id");
         
         if (questionIdStr == null || questionIdStr.isEmpty()) {
-            response.sendRedirect(request.getContextPath() + "/questions/list");
+            response.sendRedirect(request.getContextPath() + "/questions");
             return;
         }
         
@@ -55,6 +55,7 @@ public class QuestionDetailController extends HttpServlet {
                 return;
             }
             
+            // Tăng số lượt xem
             questionDAO.incrementViewCount(questionId);
             
             List<Answer> answers = answerDAO.findByQuestionId(questionId);
@@ -62,14 +63,23 @@ public class QuestionDetailController extends HttpServlet {
             // Kiểm tra xem người dùng hiện tại có phải là cố vấn hay không
             HttpSession session = request.getSession(false);
             boolean isAdvisor = false;
+            boolean isOwner = false;
+            
             if (session != null && session.getAttribute("user") != null) {
                 CustomUser currentUser = (CustomUser) session.getAttribute("user");
                 AdvisorProfile advisorProfile = advisorProfileDAO.findByUserId(currentUser.getId());
                 isAdvisor = (advisorProfile != null);
+                
+                // Kiểm tra xem người dùng hiện tại có phải là người đặt câu hỏi không
+                if (question.getUser() != null && currentUser.getId().equals(question.getUser().getId())) {
+                    isOwner = true;
+                }
+                
                 request.setAttribute("user", currentUser);
             }
-            request.setAttribute("isAdvisor", isAdvisor);
             
+            request.setAttribute("isAdvisor", isAdvisor);
+            request.setAttribute("isOwner", isOwner);
             request.setAttribute("question", question);
             request.setAttribute("answers", answers);
             
@@ -90,7 +100,7 @@ public class QuestionDetailController extends HttpServlet {
         HttpSession session = request.getSession(false);
 
         // Debug log
-        System.out.println("POST request received to /questions/detail");
+        System.out.println("POST request received to /questions/view");
         
         if (session == null || session.getAttribute("user") == null) {
             System.out.println("No session or user found.");
@@ -112,34 +122,44 @@ public class QuestionDetailController extends HttpServlet {
             if (referer != null && !referer.isEmpty()) {
                 response.sendRedirect(referer);
             } else {
-                response.sendRedirect(request.getContextPath() + "/questions/list");
+                response.sendRedirect(request.getContextPath() + "/questions");
             }
             return;
         }
         
         System.out.println("User is an advisor with role: " + advisorProfile.getRole());
 
+        // Thử lấy questionId từ parameter trước, nếu không có thì lấy từ URL parameter id
         String questionIdStr = request.getParameter("questionId");
+        if (questionIdStr == null || questionIdStr.isEmpty()) {
+            questionIdStr = request.getParameter("id");
+        }
+        
+        // Lấy nội dung từ form
         String content = request.getParameter("content");
         
         System.out.println("questionId: " + questionIdStr);
         System.out.println("content length: " + (content != null ? content.length() : "null"));
         
-        if (questionIdStr == null || questionIdStr.isEmpty() || content == null || content.trim().isEmpty()) {
-            System.out.println("Missing required parameters");
-            request.setAttribute("errorMessage", "Vui lòng nhập nội dung câu trả lời.");
-            try {
-                Long qId = Long.parseLong(questionIdStr);
-                Question question = questionDAO.findById(qId);
-                List<Answer> answers = answerDAO.findByQuestionId(qId);
-                request.setAttribute("question", question);
-                request.setAttribute("answers", answers);
-            } catch (NumberFormatException e) {
-                System.out.println("Invalid question ID format: " + questionIdStr);
-                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "ID câu hỏi không hợp lệ.");
-                return;
-            }
-            request.getRequestDispatcher("/WEB-INF/views/questions/detail.jsp").forward(request, response);
+        // Log thêm thông tin để debug
+        System.out.println("All request parameters:");
+        java.util.Enumeration<String> paramNames = request.getParameterNames();
+        while (paramNames.hasMoreElements()) {
+            String paramName = paramNames.nextElement();
+            System.out.println(paramName + ": " + request.getParameter(paramName));
+        }
+        
+        if (questionIdStr == null || questionIdStr.isEmpty()) {
+            System.out.println("Missing questionId parameter");
+            session.setAttribute("errorMessage", "Thiếu tham số ID câu hỏi");
+            response.sendRedirect(request.getContextPath() + "/questions");
+            return;
+        }
+        
+        if (content == null || content.trim().isEmpty()) {
+            System.out.println("Missing content parameter");
+            session.setAttribute("errorMessage", "Vui lòng nhập nội dung câu trả lời");
+            response.sendRedirect(request.getContextPath() + "/questions/view?id=" + questionIdStr);
             return;
         }
         
@@ -150,7 +170,7 @@ public class QuestionDetailController extends HttpServlet {
             if (question == null) {
                 System.out.println("Question not found with ID: " + questionId);
                 session.setAttribute("errorMessage", "Câu hỏi không tồn tại.");
-                response.sendRedirect(request.getContextPath() + "/questions/list");
+                response.sendRedirect(request.getContextPath() + "/questions");
                 return;
             }
             
@@ -160,6 +180,7 @@ public class QuestionDetailController extends HttpServlet {
             answer.setContent(content.trim());
             
             System.out.println("Saving answer for question ID: " + questionId);
+            System.out.println("Content to save: " + content.substring(0, Math.min(100, content.length())) + "...");
             
             if (answerDAO.saveAnswer(answer)) {
                 System.out.println("Answer saved successfully");
@@ -167,7 +188,7 @@ public class QuestionDetailController extends HttpServlet {
                 questionDAO.updateQuestion(question);
                 
                 session.setAttribute("successMessage", "Câu trả lời đã được gửi thành công.");
-                response.sendRedirect(request.getContextPath() + "/questions/detail?id=" + questionId);
+                response.sendRedirect(request.getContextPath() + "/questions/view?id=" + questionId);
             } else {
                 System.out.println("Failed to save answer");
                 request.setAttribute("errorMessage", "Có lỗi xảy ra khi lưu câu trả lời. Vui lòng thử lại.");
@@ -179,12 +200,12 @@ public class QuestionDetailController extends HttpServlet {
         } catch (NumberFormatException e) {
             System.out.println("Invalid question ID format: " + questionIdStr);
             session.setAttribute("errorMessage", "ID câu hỏi không hợp lệ.");
-            response.sendRedirect(request.getContextPath() + "/questions/list");
+            response.sendRedirect(request.getContextPath() + "/questions");
         } catch (Exception e) {
             System.out.println("Unexpected error: " + e.getMessage());
             e.printStackTrace();
             session.setAttribute("errorMessage", "Đã xảy ra lỗi không mong muốn. Vui lòng thử lại.");
-            response.sendRedirect(request.getContextPath() + "/questions/list");
+            response.sendRedirect(request.getContextPath() + "/questions");
         }
     }
 } 

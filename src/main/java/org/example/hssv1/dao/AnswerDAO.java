@@ -6,6 +6,7 @@ import org.example.hssv1.util.HibernateUtil;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.hibernate.query.Query;
+import org.hibernate.Hibernate;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,7 +28,15 @@ public class AnswerDAO {
      */
     public Answer findById(Long id) {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
-            return session.get(Answer.class, id);
+            Answer answer = session.get(Answer.class, id);
+            
+            // Khởi tạo eager loading cho các thuộc tính lazy
+            if (answer != null) {
+                Hibernate.initialize(answer.getUser());
+                Hibernate.initialize(answer.getQuestion());
+            }
+            
+            return answer;
         } catch (Exception e) {
             e.printStackTrace();
             return null;
@@ -41,7 +50,15 @@ public class AnswerDAO {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             Query<Answer> query = session.createQuery("FROM Answer a WHERE a.question.id = :questionId ORDER BY a.createdAt ASC", Answer.class);
             query.setParameter("questionId", questionId);
-            return query.list();
+            List<Answer> answers = query.list();
+            
+            // Khởi tạo eager loading cho các thuộc tính lazy
+            for (Answer answer : answers) {
+                Hibernate.initialize(answer.getUser());
+                Hibernate.initialize(answer.getQuestion());
+            }
+            
+            return answers;
         } catch (Exception e) {
             e.printStackTrace();
             return new ArrayList<>();
@@ -143,7 +160,15 @@ public class AnswerDAO {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             Query<Answer> query = session.createQuery("FROM Answer a WHERE a.user.id = :userId ORDER BY a.createdAt DESC", Answer.class);
             query.setParameter("userId", userId);
-            return query.list();
+            List<Answer> answers = query.list();
+            
+            // Khởi tạo eager loading cho các thuộc tính lazy
+            for (Answer answer : answers) {
+                Hibernate.initialize(answer.getUser());
+                Hibernate.initialize(answer.getQuestion());
+            }
+            
+            return answers;
         } catch (Exception e) {
             e.printStackTrace();
             return new ArrayList<>();
