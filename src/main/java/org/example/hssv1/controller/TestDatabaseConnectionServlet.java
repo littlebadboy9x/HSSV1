@@ -5,11 +5,11 @@ import org.example.hssv1.util.HibernateUtil; // Added
 import org.hibernate.Session; // Added
 import org.hibernate.SessionFactory; //Added
 
-import javax.servlet.ServletException; // Changed
-import javax.servlet.annotation.WebServlet; // Changed
-import javax.servlet.http.HttpServlet; // Changed
-import javax.servlet.http.HttpServletRequest; // Changed
-import javax.servlet.http.HttpServletResponse; // Changed
+import jakarta.servlet.ServletException; // Changed
+import jakarta.servlet.annotation.WebServlet; // Changed
+import jakarta.servlet.http.HttpServlet; // Changed
+import jakarta.servlet.http.HttpServletRequest; // Changed
+import jakarta.servlet.http.HttpServletResponse; // Changed
 import java.io.IOException;
 import java.io.PrintWriter;
 // import java.sql.Connection; // Removed
@@ -57,7 +57,7 @@ public class TestDatabaseConnectionServlet extends HttpServlet {
                 
                 hibernateSession = sessionFactory.openSession();
                 // Thực hiện một truy vấn đơn giản để xác nhận kết nối
-                Object result = hibernateSession.createNativeQuery("SELECT 1", Object.class).uniqueResult();
+                Object result = hibernateSession.createNativeQuery("SELECT 1", Object.class).getSingleResult();
 
                 if (result != null && result.toString().equals("1")) {
                     out.println("<p class='success'>Kết nối đến cơ sở dữ liệu qua Hibernate thành công!</p>");

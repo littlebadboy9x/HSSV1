@@ -7,6 +7,7 @@ import org.hibernate.Transaction;
 import org.hibernate.query.Query;
 
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Data Access Object cho đối tượng QuestionCategory
@@ -26,7 +27,7 @@ public class QuestionCategoryDAO {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             Query<QuestionCategory> query = session.createQuery("FROM QuestionCategory WHERE name = :name", QuestionCategory.class);
             query.setParameter("name", name);
-            return query.uniqueResult();
+            return (QuestionCategory) query.uniqueResult();
         } catch (Exception e) {
             e.printStackTrace();
             return null;
@@ -41,7 +42,7 @@ public class QuestionCategoryDAO {
             return session.createQuery("FROM QuestionCategory ORDER BY name ASC", QuestionCategory.class).list();
         } catch (Exception e) {
             e.printStackTrace();
-            return null;
+            return new ArrayList<>();
         }
     }
 
@@ -109,3 +110,4 @@ public class QuestionCategoryDAO {
         }
     }
 }
+

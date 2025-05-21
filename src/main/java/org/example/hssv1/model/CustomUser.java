@@ -1,6 +1,6 @@
 package org.example.hssv1.model;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -234,3 +234,4 @@ public class CustomUser {
         STAFF // Generic staff, could be advisor or other roles
     }
 }
+

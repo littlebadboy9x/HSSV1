@@ -1,10 +1,10 @@
 package org.example.hssv1.controller.accounts;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import org.example.hssv1.dao.UserDAO;
 import org.example.hssv1.model.CustomUser;
 
@@ -138,7 +138,7 @@ public class RegisterController extends HttpServlet {
         newUser.setPhoneNumber(phoneNumber);
         newUser.setClassName(className);
         
-        // Lưu mật khẩu dạng text thường, không mã hóa
+        // Lưu mật khẩu dạng text thường
         newUser.setPassword(password);
 
         // Lưu người dùng mới

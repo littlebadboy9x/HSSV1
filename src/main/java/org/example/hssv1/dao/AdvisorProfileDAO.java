@@ -38,7 +38,10 @@ public class AdvisorProfileDAO {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             Query<AdvisorProfile> query = session.createQuery("FROM AdvisorProfile WHERE user = :user", AdvisorProfile.class);
             query.setParameter("user", user);
-            return query.uniqueResult();
+            return (AdvisorProfile) query.uniqueResult();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
         }
     }
     
@@ -49,7 +52,7 @@ public class AdvisorProfileDAO {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             Query<AdvisorProfile> query = session.createQuery("FROM AdvisorProfile ap JOIN FETCH ap.user WHERE ap.user.id = :userId", AdvisorProfile.class);
             query.setParameter("userId", userId);
-            return query.uniqueResult();
+            return (AdvisorProfile) query.uniqueResult();
         } catch (Exception e) {
             e.printStackTrace();
             return null;
@@ -65,7 +68,7 @@ public class AdvisorProfileDAO {
             return session.createQuery("SELECT ap FROM AdvisorProfile ap JOIN FETCH ap.user LEFT JOIN FETCH ap.department ORDER BY ap.user.fullName ASC", AdvisorProfile.class).list();
         } catch (Exception e) {
             e.printStackTrace();
-            return null;
+            return new ArrayList<>();
         }
     }
     
@@ -79,7 +82,7 @@ public class AdvisorProfileDAO {
             return query.list();
         } catch (Exception e) {
             e.printStackTrace();
-            return null;
+            return new ArrayList<>();
         }
     }
     
@@ -149,3 +152,4 @@ public class AdvisorProfileDAO {
         }
     }
 }
+

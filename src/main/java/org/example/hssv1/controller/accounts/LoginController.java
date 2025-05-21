@@ -1,10 +1,10 @@
 package org.example.hssv1.controller.accounts;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 
 import org.example.hssv1.dao.UserDAO;
 import org.example.hssv1.model.CustomUser;
@@ -89,7 +89,7 @@ public class LoginController extends HttpServlet {
             return;
         }
         
-        // Kiểm tra mật khẩu - sử dụng so sánh trực tiếp thay vì BCrypt
+        // Kiểm tra mật khẩu - sử dụng so sánh trực tiếp
         if (!password.equals(user.getPassword())) {
             request.setAttribute("errorMessage", "Tên đăng nhập hoặc mật khẩu không chính xác.");
             request.setAttribute("username", username);

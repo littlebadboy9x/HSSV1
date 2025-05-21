@@ -72,7 +72,7 @@ public class QuestionDAO {
 
     public List<Question> getAllQuestions() {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
-            List<Question> questions = session.createQuery("FROM Question q ORDER BY q.createdAt DESC", Question.class).list();
+            List<Question> questions = session.createQuery("FROM Question q ORDER BY q.createdAt DESC", Question.class).getResultList();
             
             // Khởi tạo eager loading cho các thuộc tính lazy
             for (Question question : questions) {
@@ -93,7 +93,7 @@ public class QuestionDAO {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             List<Question> questions = session.createQuery("FROM Question q ORDER BY q.createdAt DESC", Question.class)
                           .setMaxResults(limit)
-                          .list();
+                          .getResultList();
                           
             // Khởi tạo eager loading cho các thuộc tính lazy
             for (Question question : questions) {
@@ -117,10 +117,10 @@ public class QuestionDAO {
             statuses.add(Question.QuestionStatus.CLOSED);
 
             List<Question> questions = session.createQuery(
-                            "FROM Question q WHERE q.status IN (:statuses) ORDER BY q.updatedAt DESC", Question.class)
-                    .setParameterList("statuses", statuses)
+                            "FROM Question q WHERE q.status IN :statuses ORDER BY q.updatedAt DESC", Question.class)
+                    .setParameter("statuses", statuses)
                     .setMaxResults(limit)
-                    .list();
+                    .getResultList();
                     
             // Khởi tạo eager loading cho các thuộc tính lazy
             for (Question question : questions) {
@@ -141,7 +141,7 @@ public class QuestionDAO {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             List<Question> questions = session.createQuery("FROM Question q ORDER BY q.viewCount DESC, q.createdAt DESC", Question.class)
                           .setMaxResults(limit)
-                          .list();
+                          .getResultList();
                           
             // Khởi tạo eager loading cho các thuộc tính lazy
             for (Question question : questions) {
@@ -162,7 +162,7 @@ public class QuestionDAO {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             Query<Question> query = session.createQuery("FROM Question q WHERE lower(q.title) LIKE lower(:keyword) OR lower(q.content) LIKE lower(:keyword) ORDER BY q.createdAt DESC", Question.class);
             query.setParameter("keyword", "%" + keyword.toLowerCase() + "%");
-            List<Question> questions = query.list();
+            List<Question> questions = query.getResultList();
             
             // Khởi tạo eager loading cho các thuộc tính lazy
             for (Question question : questions) {
@@ -183,7 +183,7 @@ public class QuestionDAO {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             Query<Question> query = session.createQuery("FROM Question q WHERE q.user = :user ORDER BY q.createdAt DESC", Question.class);
             query.setParameter("user", user);
-            List<Question> questions = query.list();
+            List<Question> questions = query.getResultList();
             
             // Khởi tạo eager loading cho các thuộc tính lazy
             for (Question question : questions) {
@@ -204,7 +204,7 @@ public class QuestionDAO {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             Query<Question> query = session.createQuery("FROM Question q WHERE q.user.id = :userId ORDER BY q.createdAt DESC", Question.class);
             query.setParameter("userId", userId);
-            List<Question> questions = query.list();
+            List<Question> questions = query.getResultList();
             
             // Khởi tạo eager loading cho các thuộc tính lazy
             for (Question question : questions) {
@@ -266,7 +266,7 @@ public class QuestionDAO {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             Query<Question> query = session.createQuery("FROM Question q WHERE q.category.id = :categoryId ORDER BY q.createdAt DESC", Question.class);
             query.setParameter("categoryId", categoryId);
-            List<Question> questions = query.list();
+            List<Question> questions = query.getResultList();
             
             // Khởi tạo eager loading cho các thuộc tính lazy
             for (Question question : questions) {
@@ -287,7 +287,7 @@ public class QuestionDAO {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             Query<Question> query = session.createQuery("FROM Question q WHERE q.major.id = :majorId ORDER BY q.createdAt DESC", Question.class);
             query.setParameter("majorId", majorId);
-            List<Question> questions = query.list();
+            List<Question> questions = query.getResultList();
             
             // Khởi tạo eager loading cho các thuộc tính lazy
             for (Question question : questions) {
@@ -308,7 +308,7 @@ public class QuestionDAO {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             Query<Question> query = session.createQuery("FROM Question q WHERE q.status = :status ORDER BY q.createdAt DESC", Question.class);
             query.setParameter("status", status);
-            List<Question> questions = query.list();
+            List<Question> questions = query.getResultList();
             
             // Khởi tạo eager loading cho các thuộc tính lazy
             for (Question question : questions) {
@@ -329,7 +329,7 @@ public class QuestionDAO {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             Query<Question> query = session.createQuery("FROM Question q WHERE q.major.department.id = :departmentId ORDER BY q.createdAt DESC", Question.class);
             query.setParameter("departmentId", departmentId);
-            List<Question> questions = query.list();
+            List<Question> questions = query.getResultList();
             
             // Khởi tạo eager loading cho các thuộc tính lazy
             for (Question question : questions) {
@@ -349,12 +349,12 @@ public class QuestionDAO {
     public List<Question> findUnansweredByDepartmentId(Long departmentId) {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             Query<Question> query = session.createQuery(
-                "FROM Question q WHERE q.major.department.id = :departmentId AND q.status = :status ORDER BY q.createdAt ASC", 
+                "FROM Question q WHERE q.major.department.id = :departmentId AND q.status = :status ORDER BY q.createdAt DESC", 
                 Question.class
             );
             query.setParameter("departmentId", departmentId);
             query.setParameter("status", Question.QuestionStatus.PENDING);
-            List<Question> questions = query.list();
+            List<Question> questions = query.getResultList();
             
             // Khởi tạo eager loading cho các thuộc tính lazy
             for (Question question : questions) {
@@ -376,16 +376,16 @@ public class QuestionDAO {
             // Find questions that have at least one answer from the specified user
             // and the question status is ANSWERED or CLOSED.
             Query<Question> query = session.createQuery(
-                "SELECT DISTINCT q FROM Question q JOIN q.answers a WHERE a.user.id = :userId AND q.status IN (:statuses) ORDER BY q.updatedAt DESC", 
+                "SELECT DISTINCT q FROM Question q JOIN q.answers a WHERE a.user.id = :userId AND q.status IN :statuses ORDER BY q.updatedAt DESC", 
                 Question.class
             );
             query.setParameter("userId", userId);
             List<Question.QuestionStatus> statuses = new ArrayList<>();
             statuses.add(Question.QuestionStatus.ANSWERED);
             statuses.add(Question.QuestionStatus.CLOSED);
-            query.setParameterList("statuses", statuses);
+            query.setParameter("statuses", statuses);
             
-            List<Question> questions = query.list();
+            List<Question> questions = query.getResultList();
             
             // Khởi tạo eager loading cho các thuộc tính lazy
             for (Question question : questions) {
@@ -402,3 +402,4 @@ public class QuestionDAO {
         }
     }
 }
+

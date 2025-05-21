@@ -1,7 +1,7 @@
 package org.example.hssv1.model;
 
 import java.sql.Timestamp;
-import javax.persistence.*;
+import jakarta.persistence.*;
 
 @Entity
 @Table(name = "advisor_profiles")
@@ -158,3 +158,4 @@ public class AdvisorProfile {
         ADMIN    // Admin hệ thống
     }
 }
+

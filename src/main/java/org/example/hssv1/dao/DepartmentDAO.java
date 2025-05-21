@@ -7,6 +7,7 @@ import org.hibernate.Transaction;
 import org.hibernate.query.Query;
 
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * DAO xử lý truy vấn dữ liệu khoa
@@ -32,7 +33,7 @@ public class DepartmentDAO {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             Query<Department> query = session.createQuery("FROM Department WHERE name = :name", Department.class);
             query.setParameter("name", name);
-            return query.uniqueResult();
+            return (Department) query.uniqueResult();
         } catch (Exception e) {
             e.printStackTrace();
             return null;
@@ -47,7 +48,7 @@ public class DepartmentDAO {
             return session.createQuery("FROM Department ORDER BY name ASC", Department.class).list();
         } catch (Exception e) {
             e.printStackTrace();
-            return null;
+            return new ArrayList<>();
         }
     }
     
@@ -119,3 +120,4 @@ public class DepartmentDAO {
         }
     }
 }
+

@@ -50,7 +50,7 @@ public class AnswerDAO {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             Query<Answer> query = session.createQuery("FROM Answer a WHERE a.question.id = :questionId ORDER BY a.createdAt ASC", Answer.class);
             query.setParameter("questionId", questionId);
-            List<Answer> answers = query.list();
+            List<Answer> answers = query.getResultList();
             
             // Khởi tạo eager loading cho các thuộc tính lazy
             for (Answer answer : answers) {
@@ -148,7 +148,7 @@ public class AnswerDAO {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             Query<Long> query = session.createQuery("SELECT COUNT(a) FROM Answer a WHERE a.user.id = :userId", Long.class);
             query.setParameter("userId", userId);
-            Long count = query.uniqueResult();
+            Long count = query.getSingleResultOrNull();
             return count != null ? count.intValue() : 0;
         } catch (Exception e) {
             e.printStackTrace();
@@ -160,7 +160,7 @@ public class AnswerDAO {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             Query<Answer> query = session.createQuery("FROM Answer a WHERE a.user.id = :userId ORDER BY a.createdAt DESC", Answer.class);
             query.setParameter("userId", userId);
-            List<Answer> answers = query.list();
+            List<Answer> answers = query.getResultList();
             
             // Khởi tạo eager loading cho các thuộc tính lazy
             for (Answer answer : answers) {
@@ -175,3 +175,4 @@ public class AnswerDAO {
         }
     }
 }
+

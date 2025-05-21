@@ -1,10 +1,10 @@
 package org.example.hssv1.util;
 
 import org.hibernate.SessionFactory;
+import org.hibernate.boot.Metadata;
+import org.hibernate.boot.MetadataSources;
+import org.hibernate.boot.registry.StandardServiceRegistry;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
-import org.hibernate.cfg.Configuration;
-import org.hibernate.cfg.Environment;
-import org.hibernate.service.ServiceRegistry;
 
 import org.example.hssv1.model.CustomUser;
 import org.example.hssv1.model.Department;
@@ -14,46 +14,56 @@ import org.example.hssv1.model.Question;
 import org.example.hssv1.model.Answer;
 import org.example.hssv1.model.AdvisorProfile;
 
-
-import java.util.Properties;
+import java.util.HashMap;
+import java.util.Map;
 
 public class HibernateUtil {
+    private static StandardServiceRegistry registry;
     private static SessionFactory sessionFactory;
 
     public static SessionFactory getSessionFactory() {
         if (sessionFactory == null) {
             try {
-                Configuration configuration = new Configuration();
-
-                Properties settings = new Properties();
-                settings.put(Environment.DRIVER, "com.mysql.cj.jdbc.Driver");
-                // Database URL from previous DatabaseConnection, adjust if needed
-                settings.put(Environment.URL, "jdbc:mysql://localhost:3306/hssv?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true");
-                settings.put(Environment.USER, "root"); // Default user, adjust if needed
-                settings.put(Environment.PASS, "123456"); // Default password, adjust if needed
-                settings.put(Environment.DIALECT, "org.hibernate.dialect.MySQLDialect"); // Updated dialect
-                settings.put(Environment.SHOW_SQL, "true");
-                settings.put(Environment.CURRENT_SESSION_CONTEXT_CLASS, "thread");
-                settings.put(Environment.HBM2DDL_AUTO, "update"); // or "create-drop" for dev, "validate" for prod
-
-                configuration.setProperties(settings);
-
-                // Add annotated classes
-                configuration.addAnnotatedClass(CustomUser.class);
-                configuration.addAnnotatedClass(Department.class);
-                configuration.addAnnotatedClass(Major.class);
-                configuration.addAnnotatedClass(QuestionCategory.class);
-                configuration.addAnnotatedClass(Question.class);
-                configuration.addAnnotatedClass(Answer.class);
-                configuration.addAnnotatedClass(AdvisorProfile.class);
-                // Add other models here as they are created/updated
-
-                ServiceRegistry serviceRegistry = new StandardServiceRegistryBuilder()
-                        .applySettings(configuration.getProperties()).build();
-
-                sessionFactory = configuration.buildSessionFactory(serviceRegistry);
+                // Tạo registry với các cấu hình
+                StandardServiceRegistryBuilder registryBuilder = new StandardServiceRegistryBuilder();
+                
+                // Cấu hình Hibernate
+                Map<String, Object> settings = new HashMap<>();
+                settings.put("hibernate.connection.driver_class", "com.mysql.cj.jdbc.Driver");
+                settings.put("hibernate.connection.url", "jdbc:mysql://localhost:3306/hssv?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true");
+                settings.put("hibernate.connection.username", "root");
+                settings.put("hibernate.connection.password", "123456");
+                settings.put("hibernate.dialect", "org.hibernate.dialect.MySQLDialect");
+                settings.put("hibernate.show_sql", "true");
+                settings.put("hibernate.format_sql", "true");
+                settings.put("hibernate.current_session_context_class", "thread");
+                settings.put("hibernate.hbm2ddl.auto", "update");
+                
+                // Áp dụng cấu hình
+                registryBuilder.applySettings(settings);
+                registry = registryBuilder.build();
+                
+                // Tạo MetadataSources và thêm các entity classes
+                MetadataSources sources = new MetadataSources(registry)
+                        .addAnnotatedClass(CustomUser.class)
+                        .addAnnotatedClass(Department.class)
+                        .addAnnotatedClass(Major.class)
+                        .addAnnotatedClass(QuestionCategory.class)
+                        .addAnnotatedClass(Question.class)
+                        .addAnnotatedClass(Answer.class)
+                        .addAnnotatedClass(AdvisorProfile.class);
+                
+                // Tạo Metadata
+                Metadata metadata = sources.getMetadataBuilder().build();
+                
+                // Tạo SessionFactory
+                sessionFactory = metadata.getSessionFactoryBuilder().build();
+                
             } catch (Exception e) {
                 e.printStackTrace();
+                if (registry != null) {
+                    StandardServiceRegistryBuilder.destroy(registry);
+                }
                 throw new RuntimeException("There was an error building the Hibernate session factory", e);
             }
         }
@@ -61,8 +71,8 @@ public class HibernateUtil {
     }
 
     public static void shutdown() {
-        if (sessionFactory != null) {
-            sessionFactory.close();
+        if (registry != null) {
+            StandardServiceRegistryBuilder.destroy(registry);
         }
     }
 } 

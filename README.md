@@ -1,86 +1,71 @@
-# Hệ thống Tư vấn Sinh viên (HSSV)
+# Hệ thống Tư vấn Sinh viên (HSSV1)
 
-Hệ thống Tư vấn Sinh viên là một ứng dụng web được xây dựng bằng Java Servlet/JSP, giúp sinh viên đặt câu hỏi và nhận câu trả lời từ các cố vấn học tập.
+Dự án web sử dụng Jakarta EE 11 và Tomcat 11.
 
-## Công nghệ sử dụng
+## Yêu cầu hệ thống
 
-- Java Servlet/JSP
-- JDBC
-- MySQL
-- Bootstrap 4
-- jQuery
-- CKEditor
-- Chart.js
-- DataTables
+- Java Development Kit (JDK) 11 trở lên
+- Apache Tomcat 11.0.0 trở lên
+- MySQL 8.0 trở lên
 
-## Tính năng đã triển khai
+## Cấu hình Tomcat 11
 
-### Module Người dùng
-- Đăng ký tài khoản
-- Đăng nhập/Đăng xuất
-- Quản lý thông tin cá nhân
-- Phân quyền (Sinh viên, Cố vấn, Admin)
+1. Tải Tomcat 11.0.0 tại [https://tomcat.apache.org/download-11.cgi](https://tomcat.apache.org/download-11.cgi)
+2. Giải nén file zip/tar.gz vào thư mục mong muốn
+3. Cấu hình biến môi trường:
+   - `CATALINA_HOME`: Trỏ tới thư mục Tomcat
+   - `JAVA_HOME`: Trỏ tới thư mục JDK
 
-### Module Câu hỏi
-- Xem danh sách câu hỏi
-- Lọc câu hỏi theo loại, ngành, trạng thái
-- Tạo câu hỏi mới
-- Xem chi tiết câu hỏi
-- Quản lý câu hỏi cá nhân
+## Cấu hình cơ sở dữ liệu
 
-### Module Câu trả lời
-- Hiển thị danh sách câu trả lời cho câu hỏi
-- Cố vấn trả lời câu hỏi
-- Cập nhật trạng thái câu hỏi khi có câu trả lời
+1. Tạo cơ sở dữ liệu MySQL với tên `hssv`
+2. Cập nhật thông tin kết nối cơ sở dữ liệu trong file `src/main/java/org/example/hssv1/util/HibernateUtil.java`
 
-### Module Tìm kiếm
-- Tìm kiếm cơ bản
-- Tìm kiếm nâng cao với nhiều bộ lọc
-- Sắp xếp kết quả tìm kiếm
-
-### Module Thống kê
-- Thống kê tổng quan
-- Thống kê theo khoa
-- Thống kê theo ngành
-- Thống kê theo loại câu hỏi
-- Thống kê theo trạng thái
-
-### Module Quản lý
-- Quản lý người dùng (thêm, sửa, xóa)
-- Quản lý cố vấn
-- Quản lý câu hỏi và câu trả lời
-
-## Cấu trúc dự án
-
-```
-src/
-├── main/
-│   ├── java/
-│   │   └── org/
-│   │       └── example/
-│   │           └── hssv1/
-│   │               ├── controller/    # Các servlet xử lý request
-│   │               ├── dao/           # Các lớp truy cập dữ liệu
-│   │               ├── model/         # Các lớp đối tượng
-│   │               └── util/          # Các lớp tiện ích
-│   ├── resources/                     # Tài nguyên
-│   └── webapp/
-│       ├── resources/                 # CSS, JS, hình ảnh
-│       └── WEB-INF/
-│           ├── views/                 # Các trang JSP
-│           └── web.xml                # Cấu hình ứng dụng
+```java
+settings.put(Environment.URL, "jdbc:mysql://localhost:3306/hssv?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true");
+settings.put(Environment.USER, "root"); // Cập nhật tài khoản
+settings.put(Environment.PASS, "123456"); // Cập nhật mật khẩu
 ```
 
-## Hướng dẫn cài đặt
+## Các thay đổi đã thực hiện để chuyển sang Jakarta EE 11
 
-1. Clone dự án từ repository
-2. Import dự án vào IDE (Eclipse, IntelliJ IDEA)
-3. Cấu hình MySQL database theo script trong `src/main/resources/database/create_database.sql`
-4. Cấu hình kết nối database trong `src/main/java/org/example/hssv1/util/DatabaseConnection.java`
-5. Build và deploy ứng dụng lên server Tomcat
+1. Cập nhật các phụ thuộc trong pom.xml từ Java EE 8 sang Jakarta EE 11
+2. Thay đổi tất cả import từ `javax.*` sang `jakarta.*` trong tất cả các file Java
+3. Cập nhật file `web.xml` để sử dụng Jakarta EE 11
+4. Cập nhật file `persistence.xml` để sử dụng Jakarta Persistence 3.1
+5. Cập nhật trong các file JSP, đổi các taglib từ `http://java.sun.com/jsp/jstl/*` sang `jakarta.tags.*`
+
+## Biên dịch và chạy dự án
+
+### Sử dụng Maven
+
+```bash
+# Biên dịch dự án
+mvn clean package
+
+# Copy file WAR vào thư mục webapps của Tomcat
+cp target/HSSV1-1.0-SNAPSHOT.war $CATALINA_HOME/webapps/HSSV1.war
+```
+
+### Sử dụng IDE
+
+1. IntelliJ IDEA:
+   - Cấu hình Tomcat Server trong Run/Debug Configurations
+   - Chọn Deployment và thêm artifact WAR
+
+2. Eclipse:
+   - Cài đặt Eclipse Enterprise for Jakarta EE plugin
+   - Cấu hình Tomcat 11 Server trong Server tab
+   - Right-click vào dự án > Run As > Run on Server
+
+## Truy cập ứng dụng
+
+- URL cơ bản: `http://localhost:8080/HSSV1/`
+- Trang đăng nhập: `http://localhost:8080/HSSV1/login`
+- Trang đăng ký: `http://localhost:8080/HSSV1/register`
 
 ## Tài khoản mặc định
 
-- Admin: admin/admin123
-- Cố vấn: advisor/advisor123
-- Sinh viên: student/student123 
+- Admin: admin@example.com / admin123
+- Cố vấn: advisor@example.com / advisor123
+- Sinh viên: student@example.com / student123 

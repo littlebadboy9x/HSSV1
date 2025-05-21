@@ -5,7 +5,6 @@ import org.example.hssv1.util.HibernateUtil;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.hibernate.query.Query;
-import org.mindrot.jbcrypt.BCrypt;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -22,7 +21,7 @@ public class UserDAO {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             Query<CustomUser> query = session.createQuery("FROM CustomUser WHERE email = :email", CustomUser.class);
             query.setParameter("email", email);
-            return query.uniqueResult();
+            return (CustomUser) query.uniqueResult();
         } catch (Exception e) {
             e.printStackTrace();
             return null;
@@ -36,7 +35,7 @@ public class UserDAO {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             Query<CustomUser> query = session.createQuery("FROM CustomUser WHERE username = :username", CustomUser.class);
             query.setParameter("username", username);
-            return query.uniqueResult();
+            return (CustomUser) query.uniqueResult();
         } catch (Exception e) {
             e.printStackTrace();
             return null;
@@ -72,7 +71,7 @@ public class UserDAO {
      */
     public CustomUser authenticate(String email, String password) {
         CustomUser user = findByEmail(email);
-        if (user != null && BCrypt.checkpw(password, user.getPassword())) {
+        if (user != null && password.equals(user.getPassword())) {
             return user;
         }
         return null;
@@ -83,7 +82,7 @@ public class UserDAO {
      */
     public CustomUser authenticateByUsername(String username, String password) {
         CustomUser user = findByUsername(username);
-        if (user != null && BCrypt.checkpw(password, user.getPassword())) {
+        if (user != null && password.equals(user.getPassword())) {
             return user;
         }
         return null;
@@ -96,7 +95,7 @@ public class UserDAO {
         Transaction transaction = null;
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             transaction = session.beginTransaction();
-            user.setPassword(BCrypt.hashpw(user.getPassword(), BCrypt.gensalt()));
+            // Không hash mật khẩu, lưu trực tiếp
             session.persist(user);
             transaction.commit();
             return true;
@@ -137,7 +136,8 @@ public class UserDAO {
             transaction = session.beginTransaction();
             CustomUser user = session.get(CustomUser.class, userId);
             if (user != null) {
-                user.setPassword(BCrypt.hashpw(newPassword, BCrypt.gensalt()));
+                // Không hash mật khẩu, lưu trực tiếp
+                user.setPassword(newPassword);
                 session.merge(user);
                 transaction.commit();
                 return true;
@@ -184,8 +184,8 @@ public class UserDAO {
     /**
      * Kiểm tra mật khẩu
      */
-    public boolean checkPassword(String plainPassword, String hashedPassword) {
-        return BCrypt.checkpw(plainPassword, hashedPassword);
+    public boolean checkPassword(String plainPassword, String storedPassword) {
+        return plainPassword.equals(storedPassword);
     }
     
     /**
@@ -213,3 +213,4 @@ public class UserDAO {
         }
     }
 }
+

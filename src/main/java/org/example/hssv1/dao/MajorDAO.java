@@ -8,6 +8,7 @@ import org.hibernate.Transaction;
 import org.hibernate.query.Query;
 
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * DAO xử lý truy vấn dữ liệu ngành học
@@ -27,7 +28,7 @@ public class MajorDAO {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             Query<Major> query = session.createQuery("FROM Major WHERE name = :name", Major.class);
             query.setParameter("name", name);
-            return query.uniqueResult();
+            return (Major) query.uniqueResult();
         } catch (Exception e) {
             e.printStackTrace();
             return null;
@@ -39,7 +40,7 @@ public class MajorDAO {
             return session.createQuery("FROM Major ORDER BY name ASC", Major.class).list();
         } catch (Exception e) {
             e.printStackTrace();
-            return null;
+            return new ArrayList<>();
         }
     }
 
@@ -50,7 +51,7 @@ public class MajorDAO {
             return query.list();
         } catch (Exception e) {
             e.printStackTrace();
-            return null;
+            return new ArrayList<>();
         }
     }
 
@@ -112,3 +113,4 @@ public class MajorDAO {
         }
     }
 }
+

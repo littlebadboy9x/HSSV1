@@ -1,6 +1,6 @@
 package org.example.hssv1.model;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.util.List;
 
 @Entity
@@ -13,6 +13,9 @@ public class Major {
 
     @Column(nullable = false, unique = true, length = 100)
     private String name;
+    
+    @Column(nullable = false, unique = true, length = 20)
+    private String code;
 
     @Column(columnDefinition = "TEXT")
     private String description;
@@ -28,8 +31,9 @@ public class Major {
     public Major() {
     }
 
-    public Major(String name, String description, Department department) {
+    public Major(String name, String code, String description, Department department) {
         this.name = name;
+        this.code = code;
         this.description = description;
         this.department = department;
     }
@@ -49,6 +53,14 @@ public class Major {
 
     public void setName(String name) {
         this.name = name;
+    }
+    
+    public String getCode() {
+        return code;
+    }
+    
+    public void setCode(String code) {
+        this.code = code;
     }
 
     public String getDescription() {
@@ -80,3 +92,4 @@ public class Major {
         return name;
     }
 }
+
